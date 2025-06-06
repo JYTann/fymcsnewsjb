@@ -748,6 +748,9 @@
         <button class="btn btn-success" id="guestLoginBtn">
           <i class="fas fa-user"></i> 访客浏览
         </button>
+         <button class="btn btn-warning" id="submitNewsBtn">
+           <i class="fas fa-paper-plane"></i> 我要投稿
+         </button>
       </div>
     </div>
 
@@ -912,6 +915,26 @@
       </div>
     </section>
 
+    <!-- 在管理员界面的新闻管理卡片后添加 -->
+<div class="card">
+  <div class="editor-header">
+    <h2 class="editor-title"><i class="fas fa-inbox"></i> 投稿管理</h2>
+    <div>
+      <select id="submissionFilter">
+        <option value="pending">待审核</option>
+        <option value="approved">已通过</option>
+        <option value="rejected">已拒绝</option>
+        <option value="all">全部投稿</option>
+      </select>
+    </div>
+  </div>
+  <div id="submissionList">
+    <div class="loading">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+</div>
+
     <!-- 新闻列表 -->
     <section id="newsList" class="hidden">
       <div class="card">
@@ -935,6 +958,108 @@
         </div>
       </div>
     </section>
+
+    <!-- 新闻投稿表单 -->
+<section id="submitNewsForm" class="hidden">
+  <div class="card">
+    <div class="editor-header">
+      <h2 class="editor-title"><i class="fas fa-paper-plane"></i> 新闻投稿</h2>
+    </div>
+    
+    <div class="card">
+      <button class="btn btn-outline back-btn" id="backFromSubmitBtn">
+        <i class="fas fa-arrow-left"></i>
+        返回
+      </button>
+      
+      <div style="margin-top: 1.5rem;">
+        <input id="submitTitle" type="text" placeholder="新闻标题" class="full-width" />
+        
+        <div class="category-selector">
+          <select id="submitCategory" class="full-width">
+            <option value="科技新闻">科技新闻</option>
+            <option value="活动预告">活动预告</option>
+            <option value="学术动态">学术动态</option>
+            <option value="体育赛事">体育赛事</option>
+            <option value="社团活动">社团活动</option>
+          </select>
+        </div>
+        
+        <input id="submitAuthor" type="text" placeholder="您的姓名/笔名" class="full-width" />
+        <input id="submitContact" type="text" placeholder="联系方式(选填)" class="full-width" />
+        
+        <div class="editor-toolbar">
+          <!-- 保留与管理员编辑器相同的工具栏 -->
+          <select class="font-selector">
+            <option value="'Noto Sans SC', sans-serif">默认字体</option>
+            <option value="'SimSun', serif">宋体</option>
+            <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+            <option value="'KaiTi', serif">楷体</option>
+          </select>
+          
+          <select class="size-selector">
+            <option value="1">小</option>
+            <option value="3" selected>中</option>
+            <option value="5">大</option>
+            <option value="7">特大</option>
+          </select>
+          
+          <button class="tool-btn" title="加粗">
+            <i class="fas fa-bold"></i>
+          </button>
+          <button class="tool-btn" title="斜体">
+            <i class="fas fa-italic"></i>
+          </button>
+          <button class="tool-btn" title="下划线">
+            <i class="fas fa-underline"></i>
+          </button>
+          
+          <button class="tool-btn" title="无序列表">
+            <i class="fas fa-list-ul"></i>
+          </button>
+          <button class="tool-btn" title="有序列表">
+            <i class="fas fa-list-ol"></i>
+          </button>
+          
+          <button class="tool-btn" title="左对齐">
+            <i class="fas fa-align-left"></i>
+          </button>
+          <button class="tool-btn" title="居中对齐">
+            <i class="fas fa-align-center"></i>
+          </button>
+          <button class="tool-btn" title="右对齐">
+            <i class="fas fa-align-right"></i>
+          </button>
+          
+          <button class="tool-btn" title="插入图片">
+            <i class="fas fa-image"></i>
+          </button>
+          <input type="file" id="submitImageUpload" accept="image/*" style="display: none;">
+          
+          <button class="tool-btn" title="插入链接">
+            <i class="fas fa-link"></i>
+          </button>
+          <button class="tool-btn" title="移除链接">
+            <i class="fas fa-unlink"></i>
+          </button>
+        </div>
+        
+        <div id="submitEditor" contenteditable="true"></div>
+        
+        <div class="action-buttons">
+          <button class="btn btn-success" id="submitDraftBtn">
+            <i class="fas fa-save"></i>
+            保存草稿
+          </button>
+          <button class="btn btn-primary" id="submitNewsBtn">
+            <i class="fas fa-paper-plane"></i>
+            提交投稿
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
     <!-- 新闻详情 -->
     <section id="newsDetail" class="hidden">
@@ -1005,6 +1130,200 @@ let role = "";
     const adminModal = document.getElementById("adminModal");
     const adminPassword = document.getElementById("adminPassword");
     const themeToggle = document.querySelector(".theme-toggle");
+
+    // 在Firebase配置后添加投稿集合引用
+const submissionsRef = db.collection("submissions");
+
+// 添加投稿相关函数
+async function submitNews() {
+  const title = document.getElementById("submitTitle").value.trim();
+  const content = document.getElementById("submitEditor").innerHTML.trim();
+  const category = document.getElementById("submitCategory").value;
+  const author = document.getElementById("submitAuthor").value.trim();
+  const contact = document.getElementById("submitContact").value.trim();
+  
+  if (!title) return alert("⚠️ 请输入新闻标题！");
+  if (!content || content === "<p><br></p>") return alert("⚠️ 新闻内容不能为空！");
+  if (!author) return alert("⚠️ 请留下您的姓名或笔名！");
+  
+  try {
+    await submissionsRef.add({
+      title,
+      content,
+      category,
+      author,
+      contact,
+      status: "pending",
+      submittedAt: new Date().toISOString()
+    });
+    
+    alert("✅ 投稿提交成功！管理员将会审核您的投稿。");
+    showNewsList();
+  } catch (error) {
+    console.error("投稿提交失败:", error);
+    alert("❌ 投稿提交失败，请重试！");
+  }
+}
+
+// 加载投稿列表(管理员)
+async function loadSubmissions() {
+  try {
+    const filter = document.getElementById("submissionFilter").value;
+    let query = submissionsRef.orderBy("submittedAt", "desc");
+    
+    if (filter !== "all") {
+      query = query.where("status", "==", filter);
+    }
+    
+    const snapshot = await query.get();
+    const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    const container = document.getElementById("submissionList");
+    
+    if (submissions.length === 0) {
+      container.innerHTML = `<div class="card"><p style="text-align: center;">暂无投稿</p></div>`;
+      return;
+    }
+    
+    container.innerHTML = submissions.map(sub => `
+      <div class="card" style="margin-bottom: 1rem;">
+        <h3>${sub.title}</h3>
+        <div class="news-meta">
+          <span><i class="fas fa-user"></i> ${sub.author}</span>
+          <span><i class="fas fa-calendar-alt"></i> ${formatDate(sub.submittedAt)}</span>
+          <span class="category-tag">${sub.category}</span>
+          <span class="status-badge ${sub.status}">
+            ${sub.status === "pending" ? "待审核" : sub.status === "approved" ? "已通过" : "已拒绝"}
+          </span>
+        </div>
+        <div class="news-excerpt">${stripHtml(sub.content).substring(0, 200)}...</div>
+        <div class="action-buttons" style="margin-top: 1rem;">
+          <button class="btn btn-primary view-submission" data-id="${sub.id}">
+            <i class="fas fa-eye"></i> 查看
+          </button>
+          ${sub.status === "pending" ? `
+          <button class="btn btn-success approve-submission" data-id="${sub.id}">
+            <i class="fas fa-check"></i> 通过
+          </button>
+          <button class="btn btn-danger reject-submission" data-id="${sub.id}">
+            <i class="fas fa-times"></i> 拒绝
+          </button>
+          ` : ""}
+          <button class="btn btn-secondary publish-submission" data-id="${sub.id}" ${sub.status !== "approved" ? "disabled" : ""}>
+            <i class="fas fa-share"></i> 发布为新闻
+          </button>
+        </div>
+      </div>
+    `).join("");
+    
+    // 绑定按钮事件
+    document.querySelectorAll(".view-submission").forEach(btn => {
+      btn.addEventListener("click", () => viewSubmission(btn.dataset.id));
+    });
+    
+    document.querySelectorAll(".approve-submission").forEach(btn => {
+      btn.addEventListener("click", () => updateSubmissionStatus(btn.dataset.id, "approved"));
+    });
+    
+    document.querySelectorAll(".reject-submission").forEach(btn => {
+      btn.addEventListener("click", () => updateSubmissionStatus(btn.dataset.id, "rejected"));
+    });
+    
+    document.querySelectorAll(".publish-submission").forEach(btn => {
+      if (!btn.disabled) {
+        btn.addEventListener("click", () => publishSubmission(btn.dataset.id));
+      }
+    });
+    
+  } catch (error) {
+    console.error("加载投稿失败:", error);
+    document.getElementById("submissionList").innerHTML = `
+      <div class="card">
+        <p style="text-align: center; color: var(--color-accent);">
+          <i class="fas fa-exclamation-triangle"></i> 加载投稿失败
+        </p>
+      </div>
+    `;
+  }
+}
+
+// 查看投稿详情
+async function viewSubmission(id) {
+  const doc = await submissionsRef.doc(id).get();
+  if (!doc.exists) return alert("投稿不存在或已被删除");
+  
+  const sub = doc.data();
+  
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.style.display = "flex";
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="modal-title">${sub.title}</h3>
+      <div class="news-meta">
+        <span><i class="fas fa-user"></i> ${sub.author}</span>
+        <span><i class="fas fa-calendar-alt"></i> ${formatDate(sub.submittedAt)}</span>
+        <span class="category-tag">${sub.category}</span>
+        <span class="status-badge ${sub.status}">
+          ${sub.status === "pending" ? "待审核" : sub.status === "approved" ? "已通过" : "已拒绝"}
+        </span>
+      </div>
+      <div class="news-content">${sub.content}</div>
+      ${sub.contact ? `<p><i class="fas fa-phone"></i> 联系方式: ${sub.contact}</p>` : ""}
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="closeModalBtn">
+          <i class="fas fa-times"></i> 关闭
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  modal.querySelector("#closeModalBtn").addEventListener("click", () => {
+    modal.remove();
+  });
+}
+
+// 更新投稿状态
+async function updateSubmissionStatus(id, status) {
+  if (!confirm(`确定要将此投稿标记为"${status === "approved" ? "已通过" : "已拒绝"}"吗？`)) return;
+  
+  try {
+    await submissionsRef.doc(id).update({ status });
+    await loadSubmissions();
+    alert("状态更新成功！");
+  } catch (error) {
+    console.error("更新状态失败:", error);
+    alert("更新状态失败！");
+  }
+}
+
+// 发布投稿为正式新闻
+async function publishSubmission(id) {
+  const doc = await submissionsRef.doc(id).get();
+  if (!doc.exists) return alert("投稿不存在或已被删除");
+  
+  const sub = doc.data();
+  
+  try {
+    await db.collection("news").add({
+      title: sub.title,
+      content: sub.content,
+      category: sub.category,
+      editor: sub.author,
+      time: new Date().toISOString(),
+      status: "published"
+    });
+    
+    alert("新闻发布成功！");
+    await loadSubmissions();
+    await loadNewsForAdmin();
+  } catch (error) {
+    console.error("发布新闻失败:", error);
+    alert("发布新闻失败！");
+  }
+}
 
     // 初始化数据库
     async function togglePinNews(id, isPinned) {
@@ -1645,6 +1964,21 @@ async function loadNewsForAdmin() {
       backToListBtn.addEventListener('click', showNewsList);
 
       bindPinButtons();
+
+      // 投稿按钮
+  document.getElementById("submitNewsBtn").addEventListener("click", () => {
+    document.querySelectorAll("section").forEach(el => el.classList.add("hidden"));
+    document.getElementById("submitNewsForm").classList.remove("hidden");
+  });
+  
+  // 从投稿返回
+  document.getElementById("backFromSubmitBtn").addEventListener("click", showNewsList);
+  
+  // 提交投稿
+  document.getElementById("submitNewsBtn").addEventListener("click", submitNews);
+  
+  // 投稿管理筛选
+  document.getElementById("submissionFilter").addEventListener("change", loadSubmissions);
       
       // 富文本工具按钮
       document.querySelectorAll('.tool-btn').forEach(btn => {
