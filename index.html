@@ -1207,90 +1207,82 @@ let role = "";
     }
 
     // 加载管理员界面
-    async function loadNewsForAdmin() {
-      try {
-        const filter = newsFilter.value;
-        let news;
-        
-        if (filter === 'drafts') {
-          news = await getNewsByStatus('draft');
-        } else if (filter === 'published') {
-          news = await getNewsByStatus('published');
-        } else {
-          news = await getAllNews();
-        }
-        
-        // 按时间降序排序
-        news.sort((a, b) => new Date(b.time) - new Date(a.time));
-        
-        const container = document.getElementById("newsListAdmin");
-        
-        if (news.length === 0) {
-          container.innerHTML = `
-            <div class="card">
-              <p style="text-align: center; color: var(--color-meta);">
-                ${filter === 'drafts' ? '暂无草稿' : filter === 'published' ? '暂无已发布新闻' : '暂无新闻'}
-              </p>
-            </div>
-          `;
-          return;
-        }
-        
-        container.innerHTML = news.map(n => `
-          <div class="card">
-            <h3>${n.title} 
-              <span class="status-badge ${n.status === 'published' ? 'published' : 'draft'}">
-                ${n.status === 'published' ? '已发布' : '草稿'}
-              </span>
-            </h3>
-            <div class="news-meta">
-              <span><i class="fas fa-calendar-alt"></i> ${n.time}</span>
-              <span><i class="fas fa-user-edit"></i> ${n.editor}</span>
-              <span class="category-tag">${n.category}</span>
-            </div>
-            <div class="action-buttons">
-              <button class="btn btn-primary edit-news" data-id="${n.id}">
-                <i class="fas fa-edit"></i>
-                编辑
-              </button>
-              <button class="btn btn-danger delete-news" data-id="${n.id}">
-                <i class="fas fa-trash"></i>
-                删除
-              </button>
-              ${n.status === 'draft' ? `
-                <button class="btn btn-success edit-news" data-id="${n.id}">
-                  <i class="fas fa-paper-plane"></i>
-                  发布
-                </button>
-              ` : ''}
-            </div>
-          </div>
-        `).join("");
-        
-        // 添加事件监听器
-        document.querySelectorAll('.edit-news').forEach(btn => {
-          btn.addEventListener('click', () => {
-            editNews(btn.dataset.id);
-          });
-        });
-        
-        document.querySelectorAll('.delete-news').forEach(btn => {
-          btn.addEventListener('click', () => {
-            deleteNews(btn.dataset.id);
-          });
-        });
-      } catch (error) {
-        console.error("加载新闻列表失败:", error);
-        document.getElementById("newsListAdmin").innerHTML = `
-          <div class="card">
-            <p style="text-align: center; color: var(--color-accent);">
-              <i class="fas fa-exclamation-triangle"></i> 加载新闻列表失败，请刷新重试
-            </p>
-          </div>
-        `;
-      }
-    }
-
+   async function loadNewsForAdmin() {
+     try {
+       const filter = newsFilter.value;
+       let news;
+       
+       if (filter === 'drafts') {
+         news = await getNewsByStatus('draft');
+       } else if (filter === 'published') {
+         news = await getNewsByStatus('published');
+       } else {
+         news = await getAllNews();
+       }
+       
+       // 按时间降序排
+       news.sort((a, b) => new Date(b.time) - new Date(a.time));
+       const container = document.getElementById("newsListAdmin");
+       
+       if (news.length === 0) {
+         container.innerHTML = `
+         <div class="card">
+         <p style="text-align: center; color: var(--color-meta);">
+         ${filter === 'drafts' ? '暂无草稿' : filter === 'published' ? '暂无已发布新闻' : '暂无新闻'}
+         </p>
+         </div>
+         `;
+         return;
+       }
+       
+       container.innerHTML = news.map(n => `
+       <div class="card">
+       <h3>${n.title} 
+       <span class="status-badge ${n.status === 'published' ? 'published' : 'draft'}">
+       ${n.status === 'published' ? '已发布' : '草稿'}
+       </span>
+       </h3>
+       <div class="news-meta">
+       <span><i class="fas fa-calendar-alt"></i> ${formatDate(n.time)}</span>
+       <span><i class="fas fa-user-edit"></i> ${n.editor}</span>
+       <span class="category-tag">${n.category}</span>
+       </div>
+       <div class="action-buttons">
+       <button class="btn btn-primary edit-news" data-id="${n.id}">
+       <i class="fas fa-edit"></i>
+       编辑
+       </button>
+       <button class="btn btn-danger delete-news" data-id="${n.id}">
+       <i class="fas fa-trash"></i>
+       删除
+       </button>
+       <button class="btn ${n.pinned ? 'btn-warning' : 'btn-secondary'} pin-news" data-id="${n.id}">
+       <i class="fas fa-thumbtack"></i> ${n.pinned ? '取消置顶' : '置顶'}
+       </button>
+       ${n.status === 'draft' ? `
+       <button class="btn btn-success edit-news" data-id="${n.id}">
+       <i class="fas fa-paper-plane"></i>
+       发布
+       </button>
+       ` : ''}
+       </div>
+       </div>
+       `).join("");
+       
+       // 重新绑定事件监听器
+       bindEventListeners();
+     
+     } catch (error) {
+       console.error("加载新闻列表失败:", error);
+       document.getElementById("newsListAdmin").innerHTML = `
+       <div class="card">
+       <p style="text-align: center; color: var(--color-accent);">
+       <i class="fas fa-exclamation-triangle"></i> 加载新闻列表失败，请刷新重试
+       </p>
+       </div>
+       `;
+     }
+   }
     // 加载新闻列表
     async function loadNewsList() {
       try {
@@ -1505,6 +1497,13 @@ let role = "";
           else if (title === '插入图片') insertImage();
           else if (title === '插入链接') execCmd('createLink');
           else if (title === '移除链接') execCmd('unlink');
+        });
+      });
+
+      // 删除按钮事件绑定
+      document.querySelectorAll('.delete-news').forEach(btn => {
+        btn.addEventListener('click', () => {
+          deleteNews(btn.dataset.id);
         });
       });
       
