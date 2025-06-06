@@ -709,66 +709,72 @@
   </header>
 
   <div class="container">
-    <!-- 登录界面 -->
-    <section id="login">
-      <div class="card">
-        <h2 style="text-align: center; margin-bottom: 2rem;">系统登录</h2>
-        <div class="role-select" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-          <button class="btn btn-primary" id="adminLoginBtn">
-            <i class="fas fa-user-shield"></i>
-            管理员登录
-          </button>
-          <button class="btn btn-success" id="guestLoginBtn">
-            <i class="fas fa-user"></i>
-            访客浏览
-          </button>
+  <!-- 登录界面 -->
+  <section id="login">
+    <div class="card">
+      <h2 style="text-align: center; margin-bottom: 2rem;">系统登录</h2>
+      <div class="role-select" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <button class="btn btn-primary" id="adminLoginBtn">
+          <i class="fas fa-user-shield"></i> 管理员登录
+        </button>
+        <button class="btn btn-success" id="guestLoginBtn">
+          <i class="fas fa-user"></i> 访客浏览
+        </button>
+      </div>
+    </div>
+
+    <!-- 三格说明区 -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
+      <!-- 格子1：管理员说明 -->
+      <div class="card" style="padding: 1.5rem; text-align: center;">
+        <div style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 1rem;">
+          <i class="fas fa-key"></i>
         </div>
+        <h3 style="margin-bottom: 0.5rem;">管理员</h3>
+        <ul style="text-align: left; padding-left: 1.5rem; color: var(--color-meta);">
+          <li>发布/编辑新闻</li>
+          <li>管理置顶内容</li>
+          <li>审核系统数据</li>
+        </ul>
       </div>
 
-      <!-- 新增的图标式说明格（方案3） -->
-      <div class="card" style="margin-top: 1.5rem;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; text-align: center;">
-          <!-- 管理员说明 -->
-          <div>
-            <div style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 0.5rem;">
-              <i class="fas fa-user-shield"></i>
-            </div>
-            <h4 style="margin-bottom: 0.5rem;">管理员权限</h4>
-            <p style="font-size: 0.9rem; color: var(--color-meta);">
-              发布/编辑新闻<br>
-              管理置顶内容<br>
-              审核系统数据
-            </p>
-          </div>
-          
-          <!-- 访客说明 -->
-          <div>
-            <div style="font-size: 2.5rem; color: var(--color-success); margin-bottom: 0.5rem;">
-              <i class="fas fa-user"></i>
-            </div>
-            <h4 style="margin-bottom: 0.5rem;">访客权限</h4>
-            <p style="font-size: 0.9rem; color: var(--color-meta);">
-              浏览公开新闻<br>
-              查看最新动态<br>
-              无需登录
-            </p>
-          </div>
-          
-          <!-- 技术支持 -->
-          <div>
-            <div style="font-size: 2.5rem; color: var(--color-accent); margin-bottom: 0.5rem;">
-              <i class="fas fa-headset"></i>
-            </div>
-            <h4 style="margin-bottom: 0.5rem;">技术支持</h4>
-            <p style="font-size: 0.9rem; color: var(--color-meta);">
-              电脑协会快讯组<br>
-              设计：陈俊源<br>
-              联系：tanjunyuanfoonyew@gmail.com
-            </p>
-          </div>
+      <!-- 格子2：访客说明 -->
+      <div class="card" style="padding: 1.5rem; text-align: center;">
+        <div style="font-size: 2.5rem; color: var(--color-success); margin-bottom: 1rem;">
+          <i class="fas fa-newspaper"></i>
         </div>
+        <h3 style="margin-bottom: 0.5rem;">访客</h3>
+        <ul style="text-align: left; padding-left: 1.5rem; color: var(--color-meta);">
+          <li>浏览公开新闻</li>
+          <li>查看活动预告</li>
+          <li>无需登录</li>
+        </ul>
       </div>
-    </section>
+
+      <!-- 格子3：技术支持 -->
+      <div class="card" style="padding: 1.5rem; text-align: center;">
+        <div style="font-size: 2.5rem; color: var(--color-accent); margin-bottom: 1rem;">
+          <i class="fas fa-code"></i>
+        </div>
+        <h3 style="margin-bottom: 0.5rem;">技术信息</h3>
+        <ul style="text-align: left; padding-left: 1.5rem; color: var(--color-meta);">
+          <li>设计：陈俊源</li>
+          <li>技术支持：电脑协会</li>
+          <li>联络：tanjunyuanfoonyew@gmail.com</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 移动端适配 -->
+<style>
+  @media (max-width: 768px) {
+    #login > div[style*="grid-template-columns"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
 
 
     <!-- 后台管理 -->
