@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh" data-theme="light">
 <head>
+  <!-- 在head标签内添加这些 -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>新山宽柔中学快讯组</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <style>
     /* CSS 样式部分 */
     :root {
@@ -743,13 +746,20 @@
   </div>
 
   <script>
-    // JavaScript 代码部分 - 更新为使用云服务
-    const API_BASE_URL = "https://fymcsjb-news-api.vercel.app"; // 替换为您的API地址
-    const ADMIN_PASSWORD = "Microcomputersociety"; // 管理员密码
-    
-    let role = "";
-    let editingId = null;
-    let currentDraft = null;
+    // JavaScript 代码部分
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBRnuwJhNE8zgWSZ2USJT5pCh138ik4G54",
+      authDomain: "fymcsnewsjb.firebaseapp.com",
+      projectId: "fymcsnewsjb",
+      storageBucket: "fymcsnewsjb.firebasestorage.app",
+      messagingSenderId: "843017779813",
+      appId: "1:843017779813:web:180674b052abbf9b36248c",
+      measurementId: "G-M9L0H4E2FR"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
     // 页面元素引用
     const editor = document.getElementById("editor");
@@ -768,6 +778,54 @@
     const adminModal = document.getElementById("adminModal");
     const adminPassword = document.getElementById("adminPassword");
     const themeToggle = document.querySelector(".theme-toggle");
+
+    // 初始化数据库
+    // 获取所有新闻（按时间倒序排列）
+    async function getAllNews() {
+      const snapshot = await db.collection("news").orderBy("time", "desc").get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+    
+    // 添加新新闻
+    async function addNews(newsItem) {
+      await db.collection("news").add(newsItem);
+    }
+    
+    // 更新新闻
+    async function updateNews(newsItem) {
+      await db.collection("news").doc(newsItem.id).update(newsItem);
+    }
+    
+    // 删除新闻
+    async function deleteNewsById(id) {
+      await db.collection("news").doc(id).delete();
+    }
+    
+    // 获取单条新闻
+    async function getNewsById(id) {
+      const doc = await db.collection("news").doc(id).get();
+      return doc.exists ? { id: doc.id, ...doc.data() } : null;
+    }
+    
+    // 按类别获取新闻
+    async function getNewsByCategory(category) {
+      let query = db.collection("news").orderBy("time", "desc");
+      if (category !== "all") {
+        query = query.where("category", "==", category);
+      }
+      const snapshot = await query.get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+    
+    // 按状态获取新闻（发布/草稿）
+    async function getNewsByStatus(status) {
+      let query = db.collection("news").orderBy("time", "desc");
+      if (status !== "all") {
+        query = query.where("status", "==", status);
+      }
+      const snapshot = await query.get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
 
     // 主题切换
     function toggleTheme() {
@@ -796,7 +854,7 @@
     // 管理员登录验证
     function verifyAdmin() {
       const password = adminPassword.value;
-      if (password === ADMIN_PASSWORD) {
+      if (password === "Microcomputersociety") {
         loginAs("admin");
         hideAdminModal();
       } else {
@@ -849,22 +907,34 @@
       if (!content || content === "<p><br></p>") return alert("⚠️ 新闻内容不能为空！");
 
       try {
-        const newsItem = {
-          title,
-          content,
-          category,
-          editor: "管理员",
-          status: 'published'
-        };
-        
         if (editingId) {
           // 更新现有新闻
-          await axios.put(`${API_BASE_URL}/api/news/${editingId}`, newsItem);
+          const newsItem = await getNewsById(editingId);
+          const updatedItem = {
+            ...newsItem,
+            title,
+            content,
+            category,
+            time: new Date().toLocaleString(),
+            status: 'published'
+          };
+          
+          await updateNews(updatedItem);
           editingId = null;
           publishBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发布新闻';
         } else {
           // 新增新闻
-          await axios.post(`${API_BASE_URL}/api/news`, newsItem);
+          const newsItem = {
+            id: Date.now().toString(),
+            title,
+            content,
+            category,
+            editor: "管理员",
+            time: new Date().toLocaleString(),
+            status: 'published'
+          };
+          
+          await addNews(newsItem);
         }
 
         // 重置表单
@@ -890,20 +960,32 @@
       if (!title && !content) return alert("⚠️ 请输入标题或内容！");
 
       try {
-        const newsItem = {
-          title: title || "无标题",
-          content: content || "<p>无内容</p>",
-          category,
-          editor: "管理员",
-          status: 'draft'
-        };
-        
         if (editingId) {
           // 更新现有草稿
-          await axios.put(`${API_BASE_URL}/api/news/${editingId}`, newsItem);
+          const newsItem = await getNewsById(editingId);
+          const updatedItem = {
+            ...newsItem,
+            title: title || "无标题",
+            content: content || "<p>无内容</p>",
+            category,
+            time: new Date().toLocaleString(),
+            status: 'draft'
+          };
+          
+          await updateNews(updatedItem);
         } else {
           // 新增草稿
-          await axios.post(`${API_BASE_URL}/api/news`, newsItem);
+          const newsItem = {
+            id: Date.now().toString(),
+            title: title || "无标题",
+            content: content || "<p>无内容</p>",
+            category,
+            editor: "管理员",
+            time: new Date().toLocaleString(),
+            status: 'draft'
+          };
+          
+          await addNews(newsItem);
         }
 
         // 重新加载新闻列表
@@ -920,7 +1002,7 @@
       if (!confirm("⚠️ 确定要永久删除这条新闻吗？")) return;
       
       try {
-        await axios.delete(`${API_BASE_URL}/api/news/${id}`);
+        await deleteNewsById(id);
         await loadNewsForAdmin();
         alert("🗑️ 新闻已删除！");
       } catch (error) {
@@ -932,9 +1014,7 @@
     // 新闻编辑功能
     async function editNews(id) {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/news/${id}`);
-        const newsItem = response.data;
-        
+        const newsItem = await getNewsById(id);
         titleInput.value = newsItem.title;
         editor.innerHTML = newsItem.content;
         categorySelect.value = newsItem.category || "科技新闻";
@@ -957,11 +1037,18 @@
     async function loadNewsForAdmin() {
       try {
         const filter = newsFilter.value;
-        const response = await axios.get(`${API_BASE_URL}/api/news?status=${filter}`);
-        const news = response.data;
+        let news;
+        
+        if (filter === 'drafts') {
+          news = await getNewsByStatus('draft');
+        } else if (filter === 'published') {
+          news = await getNewsByStatus('published');
+        } else {
+          news = await getAllNews();
+        }
         
         // 按时间降序排序
-        news.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        news.sort((a, b) => new Date(b.time) - new Date(a.time));
         
         const container = document.getElementById("newsListAdmin");
         
@@ -984,21 +1071,21 @@
               </span>
             </h3>
             <div class="news-meta">
-              <span><i class="fas fa-calendar-alt"></i> ${new Date(n.createdAt).toLocaleString()}</span>
+              <span><i class="fas fa-calendar-alt"></i> ${n.time}</span>
               <span><i class="fas fa-user-edit"></i> ${n.editor}</span>
               <span class="category-tag">${n.category}</span>
             </div>
             <div class="action-buttons">
-              <button class="btn btn-primary edit-news" data-id="${n._id}">
+              <button class="btn btn-primary edit-news" data-id="${n.id}">
                 <i class="fas fa-edit"></i>
                 编辑
               </button>
-              <button class="btn btn-danger delete-news" data-id="${n._id}">
+              <button class="btn btn-danger delete-news" data-id="${n.id}">
                 <i class="fas fa-trash"></i>
                 删除
               </button>
               ${n.status === 'draft' ? `
-                <button class="btn btn-success edit-news" data-id="${n._id}">
+                <button class="btn btn-success edit-news" data-id="${n.id}">
                   <i class="fas fa-paper-plane"></i>
                   发布
                 </button>
@@ -1035,11 +1122,10 @@
     async function loadNewsList() {
       try {
         const category = categoryFilter.value;
-        const response = await axios.get(`${API_BASE_URL}/api/news?status=published${category !== 'all' ? `&category=${category}` : ''}`);
-        const news = response.data;
+        const news = await getNewsByCategory(category);
         
         // 按时间降序排序
-        news.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        news.sort((a, b) => new Date(b.time) - new Date(a.time));
         
         const container = document.getElementById("newsItems");
         
@@ -1055,9 +1141,9 @@
         }
         
         container.innerHTML = news.map(n => `
-          <div class="card news-card clickable" data-id="${n._id}">
+          <div class="card news-card clickable" data-id="${n.id}">
             <div class="news-meta">
-              <span><i class="fas fa-calendar-alt"></i> ${new Date(n.createdAt).toLocaleString()}</span>
+              <span><i class="fas fa-calendar-alt"></i> ${n.time}</span>
               <span class="category-tag">${n.category}</span>
             </div>
             <h3>${n.title}</h3>
@@ -1088,14 +1174,13 @@
     // 显示新闻详情
     async function showNewsDetail(id) {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/news/${id}`);
-        const newsItem = response.data;
+        const newsItem = await getNewsById(id);
         const detailContent = document.getElementById('detailContent');
         
         detailContent.innerHTML = `
           <h1 class="news-title">${newsItem.title}</h1>
           <div class="news-meta">
-            <span><i class="fas fa-calendar-alt"></i> ${new Date(newsItem.createdAt).toLocaleString()}</span>
+            <span><i class="fas fa-calendar-alt"></i> ${newsItem.time}</span>
             <span><i class="fas fa-user-edit"></i> ${newsItem.editor}</span>
             <span class="category-tag">${newsItem.category}</span>
           </div>
@@ -1122,6 +1207,7 @@
     // 初始化页面
     async function initialize() {
       try {
+        
         // 初始化主题
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
