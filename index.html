@@ -746,7 +746,6 @@
   </div>
 
   <script>
-    let editingId = null;
     // JavaScript 代码部分
 
     const firebaseConfig = {
@@ -954,6 +953,7 @@
       const category = categorySelect.value;
       
       if (!title && !content) return alert("⚠️ 请输入标题或内容！");
+
       try {
         const newsItem = {
           title: title || "无标题",
@@ -967,14 +967,16 @@
         if (editingId) {
           // 更新现有草稿
           await db.collection("news").doc(editingId).update(newsItem);
+          alert("📝 草稿更新成功！");
         } else {
           // 新增草稿
           await db.collection("news").add(newsItem);
+          alert("📝 草稿保存成功！");
         }
         
         // 重新加载新闻列表
         await loadNewsForAdmin();
-        alert("📝 草稿保存成功！");
+        
       } catch (error) {
         console.error("保存草稿失败:", error);
         alert("❌ 保存草稿失败，请重试！错误信息: " + error.message);
