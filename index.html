@@ -761,6 +761,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    let editingId = null;
+    
     // 页面元素引用
     const editor = document.getElementById("editor");
     const titleInput = document.getElementById("titleInput");
