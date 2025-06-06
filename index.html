@@ -782,8 +782,14 @@
     // 初始化数据库
     // 获取所有新闻（按时间倒序排列）
     async function getAllNews() {
-      const snapshot = await db.collection("news").orderBy("time", "desc").get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      try {
+        const snapshot = await db.collection("news").orderBy("time", "desc").get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (error) {
+        console.error("获取新闻失败:", error);
+        alert("加载新闻失败: " + error.message);
+        return [];
+      }
     }
     
     // 添加新新闻
@@ -905,38 +911,27 @@
       
       if (!title) return alert("⚠️ 请输入新闻标题！");
       if (!content || content === "<p><br></p>") return alert("⚠️ 新闻内容不能为空！");
-
+      
       try {
+        const newsItem = {
+          title,
+          content,
+          category,
+          editor: "管理员",
+          time: new Date().toISOString(),  // 改为ISO格式时间
+          status: 'published'
+        };
+        
         if (editingId) {
           // 更新现有新闻
-          const newsItem = await getNewsById(editingId);
-          const updatedItem = {
-            ...newsItem,
-            title,
-            content,
-            category,
-            time: new Date().toLocaleString(),
-            status: 'published'
-          };
-          
-          await updateNews(updatedItem);
+          await db.collection("news").doc(editingId).update(newsItem);
           editingId = null;
           publishBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发布新闻';
         } else {
           // 新增新闻
-          const newsItem = {
-            id: Date.now().toString(),
-            title,
-            content,
-            category,
-            editor: "管理员",
-            time: new Date().toLocaleString(),
-            status: 'published'
-          };
-          
-          await addNews(newsItem);
+          await db.collection("news").add(newsItem);
         }
-
+        
         // 重置表单
         titleInput.value = "";
         editor.innerHTML = "";
@@ -947,7 +942,7 @@
         alert(editingId ? "✅ 新闻更新成功！" : "✅ 新闻发布成功！");
       } catch (error) {
         console.error("发布新闻失败:", error);
-        alert("❌ 发布新闻失败，请重试！");
+        alert("❌ 发布新闻失败，请重试！错误信息: " + error.message);
       }
     }
 
@@ -958,42 +953,30 @@
       const category = categorySelect.value;
       
       if (!title && !content) return alert("⚠️ 请输入标题或内容！");
-
       try {
+        const newsItem = {
+          title: title || "无标题",
+          content: content || "<p>无内容</p>",
+          category,
+          editor: "管理员",
+          time: new Date().toISOString(),  // 改为ISO格式时间
+          status: 'draft'
+        };
+        
         if (editingId) {
           // 更新现有草稿
-          const newsItem = await getNewsById(editingId);
-          const updatedItem = {
-            ...newsItem,
-            title: title || "无标题",
-            content: content || "<p>无内容</p>",
-            category,
-            time: new Date().toLocaleString(),
-            status: 'draft'
-          };
-          
-          await updateNews(updatedItem);
+          await db.collection("news").doc(editingId).update(newsItem);
         } else {
           // 新增草稿
-          const newsItem = {
-            id: Date.now().toString(),
-            title: title || "无标题",
-            content: content || "<p>无内容</p>",
-            category,
-            editor: "管理员",
-            time: new Date().toLocaleString(),
-            status: 'draft'
-          };
-          
-          await addNews(newsItem);
+          await db.collection("news").add(newsItem);
         }
-
+        
         // 重新加载新闻列表
         await loadNewsForAdmin();
         alert("📝 草稿保存成功！");
       } catch (error) {
         console.error("保存草稿失败:", error);
-        alert("❌ 保存草稿失败，请重试！");
+        alert("❌ 保存草稿失败，请重试！错误信息: " + error.message);
       }
     }
 
