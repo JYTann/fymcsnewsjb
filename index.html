@@ -916,11 +916,14 @@ let role = "";
     // 获取所有新闻（按时间倒序排列）
     async function getAllNews() {
       try {
-        const snapshot = await db.collection("news").orderBy("pinned", "desc").orderBy("time", "desc").get();
+        const snapshot = await db.collection("news")
+          .orderBy("pinned", "desc")
+          .orderBy("time", "desc")
+          .get();
+        
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       } catch (error) {
         console.error("获取新闻失败:", error);
-        alert("加载新闻失败: " + error.message);
         return [];
       }
     }
@@ -1038,19 +1041,19 @@ let role = "";
 
     // 用户登录系统
     async function loginAs(selectedRole) {
+      console.log("Logging in as:", selectedRole); // 调试日志
       role = selectedRole;
       document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
       logoutBtn.classList.remove('hidden');
-
+      
       if (role === 'admin') {
         document.getElementById('dashboard').classList.remove('hidden');
+        console.log("Loading admin news..."); // 调试日志
         await loadNewsForAdmin();
       } else {
         document.getElementById('newsList').classList.remove('hidden');
         await loadNewsList();
       }
-      
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // 登出功能
@@ -1102,7 +1105,7 @@ let role = "";
           content,
           category,
           editor: "管理员",
-          time: new Date().toISOString(),  // 改为ISO格式时间
+          time: firebase.firestore.FieldValue.serverTimestamp(),
           status: 'published'
         };
         
