@@ -343,9 +343,18 @@
       color: var(--color-meta);
       margin-bottom: 1rem;
       font-size: 1.1rem;
+      flex-grow: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
     }
 
     .news-card {
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
       transition: all 0.3s ease;
     }
 
@@ -817,12 +826,17 @@ let role = "";
     
     // 按类别获取新闻
     async function getNewsByCategory(category) {
-      let query = db.collection("news").orderBy("time", "desc");
-      if (category !== "all") {
-        query = query.where("category", "==", category);
+      try {
+        let query = db.collection("news").orderBy("time", "desc");
+        if (category !== "all") {
+          query = query.where("category", "==", category);
+        }
+        const snapshot = await query.get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (error) {
+        console.error("按类别获取新闻失败:", error);
+        throw error; // 抛出错误以便上层处理
       }
-      const snapshot = await query.get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
     
     // 按状态获取新闻（发布/草稿）
@@ -903,6 +917,23 @@ let role = "";
     function execCmd(cmd, value = null) {
       document.execCommand(cmd, false, value);
       editor.focus();
+    }
+
+    function formatDate(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function stripHtml(html) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || "";
     }
 
     // 新闻发布/更新功能
@@ -1114,31 +1145,30 @@ let role = "";
         
         // 按时间降序排序
         news.sort((a, b) => new Date(b.time) - new Date(a.time));
-        
         const container = document.getElementById("newsItems");
         
         if (news.length === 0) {
           container.innerHTML = `
-            <div class="card">
-              <p style="text-align: center; color: var(--color-meta);">
-                暂无新闻
-              </p>
+          <div class="card">
+          <p style="text-align: center; color: var(--color-meta);">
+            暂无新闻
+            </p>
             </div>
-          `;
+            `;
           return;
         }
         
         container.innerHTML = news.map(n => `
-          <div class="card news-card clickable" data-id="${n.id}">
-            <div class="news-meta">
-              <span><i class="fas fa-calendar-alt"></i> ${n.time}</span>
-              <span class="category-tag">${n.category}</span>
-            </div>
-            <h3>${n.title}</h3>
-            <div class="news-excerpt">
-              ${n.content.substring(0, 100)}...
-            </div>
-          </div>
+        <div class="card news-card clickable" data-id="${n.id}">
+        <div class="news-meta">
+        <span><i class="fas fa-calendar-alt"></i> ${formatDate(n.time)}</span>
+        <span class="category-tag">${n.category}</span>
+        </div>
+        <h3>${n.title}</h3>
+        <div class="news-excerpt">
+        ${stripHtml(n.content).substring(0, 100)}...
+        </div>
+        </div>
         `).join("");
         
         // 添加点击事件
@@ -1150,15 +1180,14 @@ let role = "";
       } catch (error) {
         console.error("加载新闻列表失败:", error);
         document.getElementById("newsItems").innerHTML = `
-          <div class="card">
-            <p style="text-align: center; color: var(--color-accent);">
-              <i class="fas fa-exclamation-triangle"></i> 加载新闻列表失败，请刷新重试
-            </p>
-          </div>
+        <div class="card">
+        <p style="text-align: center; color: var(--color-accent);">
+        <i class="fas fa-exclamation-triangle"></i> 加载新闻列表失败: ${error.message}
+        </p>
+        </div>
         `;
       }
     }
-
     // 显示新闻详情
     async function showNewsDetail(id) {
       try {
