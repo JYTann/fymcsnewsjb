@@ -1209,7 +1209,7 @@ let role = "";
     }
 
     // 加载管理员界面
-   // 管理员界面加载新闻
+    // 管理员界面加载新闻
 async function loadNewsForAdmin() {
   try {
     const filter = newsFilter.value;
@@ -1220,12 +1220,14 @@ async function loadNewsForAdmin() {
     } else if (filter === 'published') {
       news = await getNewsByStatus('published');
     } else {
-      news = await getAllNews(); // 默认：全部新闻
+      // 修改这里：使用正确的查询方式获取所有新闻
+      const snapshot = await db.collection("news").orderBy("time", "desc").get();
+      news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
     const container = document.getElementById("newsListAdmin");
 
-    if (!news.length) {
+    if (!news || news.length === 0) {
       container.innerHTML = `
         <div class="card">
           <p style="text-align: center; color: var(--color-meta);">暂无新闻</p>
@@ -1276,6 +1278,7 @@ async function loadNewsForAdmin() {
     `;
   }
 }
+
     
     // 加载新闻列表
     async function loadNewsList() {
