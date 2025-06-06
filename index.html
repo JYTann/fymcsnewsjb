@@ -498,6 +498,34 @@
       transition: all 0.2s;
     }
 
+    .share-section {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: var(--color-card);
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+    }
+
+    .share-section h3 {
+      margin-bottom: 1rem;
+      color: var(--color-primary);
+    }
+
+    .share-icons a {
+      font-size: 1.2rem;
+      opacity: 0.7;
+      transition: all 0.2s;
+    }
+
+    .share-icons a:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+
+    .news-footer {
+      margin-top: auto;
+    }
+
     .share-btn:hover {
       opacity: 0.9;
       transform: translateY(-2px);
@@ -1071,33 +1099,58 @@ let role = "";
     }
 
     function generateNewsCard(n, isAdmin = false) {
-      return `
-      <div class="card news-card ${n.pinned ? 'pinned-news' : ''}" data-id="${n.id}">
-      <div class="news-meta">
+  const publicUrl = `${window.location.origin}${window.location.pathname}?id=${n.id}`;
+  
+  return `
+  <div class="card news-card ${n.pinned ? 'pinned-news' : ''}" data-id="${n.id}">
+    <div class="news-meta">
       <span><i class="fas fa-calendar-alt"></i> ${formatDate(n.time)}</span>
       <span class="category-tag">${n.category}</span>
       ${n.pinned ? '<span class="badge pinned"><i class="fas fa-thumbtack"></i> 置顶</span>' : ''}
-      </div>
-      <h3>${n.title}</h3>
-      <div class="news-excerpt">
+    </div>
+    <h3>${n.title}</h3>
+    <div class="news-excerpt">
       ${stripHtml(n.content).substring(0, 100)}...
+    </div>
+    <div class="news-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+      <button class="btn btn-outline read-more" data-id="${n.id}">
+        <i class="fas fa-book-open"></i> 阅读更多
+      </button>
+      <div class="share-icons" style="display: flex; gap: 0.5rem;">
+        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicUrl)}" 
+           target="_blank" title="分享到Facebook" style="color: #3b5998;">
+          <i class="fab fa-facebook-f"></i>
+        </a>
+        <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(publicUrl)}&text=${encodeURIComponent(n.title)}" 
+           target="_blank" title="分享到Twitter" style="color: #1da1f2;">
+          <i class="fab fa-twitter"></i>
+        </a>
+        <a href="https://www.threads.net/intent/post?text=${encodeURIComponent(n.title + '\n\n' + publicUrl)}" 
+           target="_blank" title="分享到Threads" style="color: #000;">
+          <i class="fab fa-instagram"></i>
+        </a>
+        <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(n.title + ' - ' + publicUrl)}" 
+           target="_blank" title="分享到WhatsApp" style="color: #25d366;">
+          <i class="fab fa-whatsapp"></i>
+        </a>
       </div>
-      ${isAdmin ? `
-      <div class="action-buttons">
+    </div>
+    ${isAdmin ? `
+    <div class="action-buttons">
       <button class="btn btn-primary edit-news" data-id="${n.id}">
-      <i class="fas fa-edit"></i> 编辑
+        <i class="fas fa-edit"></i> 编辑
       </button>
       <button class="btn btn-danger delete-news" data-id="${n.id}">
-      <i class="fas fa-trash"></i> 删除
+        <i class="fas fa-trash"></i> 删除
       </button>
       <button class="btn ${n.pinned ? 'btn-warning' : 'btn-secondary'} pin-news" data-id="${n.id}">
-      <i class="fas fa-thumbtack"></i> ${n.pinned ? '取消置顶' : '置顶'}
+        <i class="fas fa-thumbtack"></i> ${n.pinned ? '取消置顶' : '置顶'}
       </button>
-      </div>
-      ` : ''}
-      </div>
-      `;
-    }
+    </div>
+    ` : ''}
+  </div>
+  `;
+}
 
     // 隐藏管理员登录模态框
     function hideAdminModal() {
@@ -1412,28 +1465,66 @@ async function loadNewsForAdmin() {
       try {
         const newsItem = await getNewsById(id);
         const detailContent = document.getElementById('detailContent');
-        
+    
+    // 生成公开链接
+        const publicUrl = `${window.location.origin}${window.location.pathname}?id=${id}`;
+    
         detailContent.innerHTML = `
-          <h1 class="news-title">${newsItem.title}</h1>
-          <div class="news-meta">
-            <span><i class="fas fa-calendar-alt"></i> ${newsItem.time}</span>
-            <span><i class="fas fa-user-edit"></i> ${newsItem.editor}</span>
-            <span class="category-tag">${newsItem.category}</span>
-          </div>
-          <div class="news-content">
-            ${newsItem.content}
-          </div>
-        `;
+        <h1 class="news-title">${newsItem.title}</h1>
+        <div class="news-meta">
+        <span><i class="fas fa-calendar-alt"></i> ${formatDate(newsItem.time)}</span>
+        <span><i class="fas fa-user-edit"></i> ${newsItem.editor}</span>
+        <span class="category-tag">${newsItem.category}</span>
+        </div>
+        <div class="news-content">
+        ${newsItem.content}
+        </div>
         
-        // 显示详情部分
-        document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
-        document.getElementById('newsDetail').classList.remove('hidden');
-      } catch (error) {
-        console.error('加载新闻详情失败:', error);
-        alert('加载新闻详情失败！');
-      }
-    }
-
+        <div class="divider"></div>
+        <div class="share-section">
+        <h3><i class="fas fa-share-alt"></i> 分享这篇新闻</h3>
+        <div class="share-buttons">
+          <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicUrl)}" 
+             target="_blank" class="share-btn facebook">
+            <i class="fab fa-facebook-f"></i> Facebook
+          </a>
+          <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(publicUrl)}&text=${encodeURIComponent(newsItem.title)}" 
+             target="_blank" class="share-btn twitter">
+            <i class="fab fa-twitter"></i> Twitter
+          </a>
+          <a href="https://www.threads.net/intent/post?text=${encodeURIComponent(newsItem.title + '\n\n' + publicUrl)}" 
+             target="_blank" class="share-btn instagram">
+            <i class="fab fa-instagram"></i> Threads
+          </a>
+          <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(newsItem.title + ' - ' + publicUrl)}" 
+             target="_blank" class="share-btn whatsapp">
+            <i class="fab fa-whatsapp"></i> WhatsApp
+          </a>
+          <button class="share-btn link" id="copyLinkBtn">
+            <i class="fas fa-link"></i> 复制链接
+          </button>
+        </div>
+        </div>
+        `;
+    
+    // 添加复制链接功能
+        document.getElementById('copyLinkBtn').addEventListener('click', () => {
+          navigator.clipboard.writeText(publicUrl).then(() => {
+            alert('链接已复制到剪贴板！');
+          }).catch(err => {
+            console.error('复制失败:', err);
+            alert('复制失败，请手动复制链接');
+          });
+        });
+    
+    // 显示详情部分
+    document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+    document.getElementById('newsDetail').classList.remove('hidden');
+  } catch (error) {
+    console.error('加载新闻详情失败:', error);
+    alert('加载新闻详情失败！');
+  }
+}
     // 返回新闻列表
     function showNewsList() {
       document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
