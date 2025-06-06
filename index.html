@@ -917,6 +917,8 @@ let role = "";
     async function getAllNews() {
       try {
         const snapshot = await db.collection("news")
+          .where("status", "==", "published") // ✅ 只取已发布新闻
+          .orderBy("status") // ✅ Firestore 索引需要这个顺序
           .orderBy("pinned", "desc")
           .orderBy("time", "desc")
           .get();
