@@ -1858,24 +1858,13 @@ async function submitNews() {
   const title = document.getElementById('submitTitle').value.trim();
   const content = document.getElementById('submitContent').value.trim();
   const category = document.getElementById('submitCategory').value;
-  const files = Array.from(document.getElementById('submitImages').files).slice(0, 3);
 
   if (!name || !title || !content) {
     alert("⚠️ 请填写所有必填项！");
     return;
   }
 
-  const storage = firebase.storage();
-  const imageUrls = [];
-
   try {
-    for (const file of files) {
-      const ref = storage.ref().child(`submissions/${Date.now()}_${file.name}`);
-      await ref.put(file);
-      const url = await ref.getDownloadURL();
-      imageUrls.push(url);
-    }
-
     const data = {
       name,
       title,
@@ -1883,12 +1872,12 @@ async function submitNews() {
       category,
       time: new Date().toISOString(),
       status: 'pending',
-      images: imageUrls
+      images: []  // 无图
     };
 
     await db.collection("submissions").add(data);
     alert("✅ 投稿成功！我们将尽快审核您的内容。");
-    
+
     // 清空表单
     document.getElementById('submitName').value = "";
     document.getElementById('submitTitle').value = "";
@@ -1902,7 +1891,6 @@ async function submitNews() {
     alert("❌ 投稿失败，请稍后再试！");
   }
 }
-
 
     // 页面加载完成后初始化
     window.addEventListener('DOMContentLoaded', async () => {
