@@ -909,6 +909,19 @@
             <div class="loading-spinner"></div>
           </div>
         </div>
+
+        <!-- 投稿审核管理 -->
+<section id="submissionReview" class="hidden">
+  <div class="card">
+    <div class="editor-header">
+      <h2 class="editor-title"><i class="fas fa-inbox"></i> 投稿审核</h2>
+    </div>
+    <div id="submissionContainer">
+      <div class="loading"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+</section>
+
       </div>
     </section>
 
@@ -917,6 +930,11 @@
       <div class="card">
         <div class="editor-header">
           <h2 class="editor-title"><i class="fas fa-bell"></i> 最新消息</h2>
+          <div style="margin-top: 1rem;">
+            <button class="btn btn-success" onclick="showSubmissionForm()">
+              <i class="fas fa-edit"></i> 我要投稿
+            </button>
+          </div>
           <div>
             <select id="categoryFilter">
               <option value="all">全部类别</option>
@@ -935,6 +953,44 @@
         </div>
       </div>
     </section>
+  <!-- 我要投稿 -->
+<section id="submitFormSection" class="hidden">
+  <div class="card">
+    <button class="btn btn-outline back-btn" onclick="showNewsList()">
+      <i class="fas fa-arrow-left"></i> 返回新闻列表
+    </button>
+
+    <h2 class="editor-title" style="margin-bottom: 1rem;"><i class="fas fa-pen-nib"></i> 我要投稿</h2>
+    
+    <input type="text" id="submitName" placeholder="投稿者姓名（必填）" class="full-width">
+    <input type="text" id="submitTitle" placeholder="新闻标题（必填）" class="full-width">
+
+    <div class="category-selector">
+      <select id="submitCategory" class="full-width">
+        <option value="科技新闻">科技新闻</option>
+        <option value="活动预告">活动预告</option>
+        <option value="学术动态">学术动态</option>
+        <option value="体育赛事">体育赛事</option>
+        <option value="社团活动">社团活动</option>
+      </select>
+    </div>
+
+    <textarea id="submitContent" rows="6" placeholder="请输入内容..." class="full-width"></textarea>
+    
+    <div style="margin-top: 1rem;">
+      <label style="display:block; margin-bottom: 0.5rem;">上传图片（最多 3 张）：</label>
+      <input type="file" id="submitImages" accept="image/*" multiple class="full-width">
+      <div id="imagePreview" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+    </div>
+
+    <div class="action-buttons" style="margin-top: 1.5rem;">
+      <button class="btn btn-primary" onclick="submitNews()">
+        <i class="fas fa-paper-plane"></i> 提交投稿
+      </button>
+    </div>
+  </div>
+</section>
+
 
     <!-- 新闻详情 -->
     <section id="newsDetail" class="hidden">
@@ -1164,6 +1220,8 @@ let role = "";
       if (password === "Microcomputersociety") {
         loginAs("admin");
         hideAdminModal();
+        document.getElementById('submissionReview').classList.remove('hidden');
+        loadSubmissions();
       } else {
         alert("⚠️ 密码错误，请重新输入！");
         adminPassword.value = "";
@@ -1336,6 +1394,86 @@ let role = "";
         alert("❌ 加载新闻失败，请重试！");
       }
     }
+
+    async function loadSubmissions() {
+  const container = document.getElementById("submissionContainer");
+  try {
+    const snapshot = await db.collection("submissions").orderBy("time", "desc").get();
+    if (snapshot.empty) {
+      container.innerHTML = `<p style="text-align: center; color: var(--color-meta);">暂无投稿</p>`;
+      return;
+    }
+
+    container.innerHTML = snapshot.docs.map(doc => {
+      const s = doc.data();
+      const images = (s.images || []).map(url => `<img src="${url}" style="width: 100px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-right: 0.5rem;">`).join("");
+      return `
+        <div class="card" data-id="${doc.id}">
+          <div class="news-meta">
+            <span><i class="fas fa-user"></i> ${s.name}</span>
+            <span><i class="fas fa-calendar-alt"></i> ${formatDate(s.time)}</span>
+            <span class="category-tag">${s.category}</span>
+          </div>
+          <h3>${s.title}</h3>
+          <p style="margin: 1rem 0; color: var(--color-text);">${s.content}</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">${images}</div>
+          <div class="action-buttons" style="margin-top: 1rem;">
+            <button class="btn btn-primary" onclick="approveSubmission('${doc.id}')">
+              <i class="fas fa-check"></i> 审核并发布
+            </button>
+            <button class="btn btn-danger" onclick="deleteSubmission('${doc.id}')">
+              <i class="fas fa-trash"></i> 删除投稿
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (error) {
+    console.error("加载投稿失败：", error);
+    container.innerHTML = `<p style="text-align: center; color: var(--color-accent);">加载失败，请刷新</p>`;
+  }
+}
+
+    async function approveSubmission(id) {
+  try {
+    const doc = await db.collection("submissions").doc(id).get();
+    if (!doc.exists) return;
+
+    const data = doc.data();
+
+    await db.collection("news").add({
+      title: data.title,
+      content: data.content,
+      category: data.category,
+      editor: data.name || "投稿者",
+      time: new Date().toISOString(),
+      status: "published",
+      pinned: false,
+      images: data.images || []
+    });
+
+    await db.collection("submissions").doc(id).delete();
+    alert("✅ 投稿已发布为新闻！");
+    await loadSubmissions();
+    await loadNewsForAdmin();
+  } catch (error) {
+    console.error("发布失败：", error);
+    alert("❌ 发布失败！");
+  }
+}
+
+async function deleteSubmission(id) {
+  if (!confirm("⚠️ 确定删除这条投稿？")) return;
+  try {
+    await db.collection("submissions").doc(id).delete();
+    alert("🗑️ 投稿已删除");
+    await loadSubmissions();
+  } catch (error) {
+    console.error("删除失败：", error);
+    alert("❌ 删除失败！");
+  }
+}
 
     // 加载管理员界面
     // 管理员界面加载新闻
@@ -1681,6 +1819,91 @@ async function loadNewsForAdmin() {
         execCmd('fontSize', false, this.value);
       });
     }
+
+    // 显示投稿页面
+function showSubmissionForm() {
+  document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+  document.getElementById('submitFormSection').classList.remove('hidden');
+  document.getElementById('submitName').focus();
+}
+
+// 监听图片选择并预览
+document.addEventListener('DOMContentLoaded', () => {
+  const fileInput = document.getElementById('submitImages');
+  const preview = document.getElementById('imagePreview');
+  
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      preview.innerHTML = "";
+      const files = Array.from(fileInput.files).slice(0, 3);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.style.width = '100px';
+          img.style.height = 'auto';
+          img.style.borderRadius = '8px';
+          img.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+          preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+  }
+});
+
+// 投稿提交逻辑
+async function submitNews() {
+  const name = document.getElementById('submitName').value.trim();
+  const title = document.getElementById('submitTitle').value.trim();
+  const content = document.getElementById('submitContent').value.trim();
+  const category = document.getElementById('submitCategory').value;
+  const files = Array.from(document.getElementById('submitImages').files).slice(0, 3);
+
+  if (!name || !title || !content) {
+    alert("⚠️ 请填写所有必填项！");
+    return;
+  }
+
+  const storage = firebase.storage();
+  const imageUrls = [];
+
+  try {
+    for (const file of files) {
+      const ref = storage.ref().child(`submissions/${Date.now()}_${file.name}`);
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      imageUrls.push(url);
+    }
+
+    const data = {
+      name,
+      title,
+      content,
+      category,
+      time: new Date().toISOString(),
+      status: 'pending',
+      images: imageUrls
+    };
+
+    await db.collection("submissions").add(data);
+    alert("✅ 投稿成功！我们将尽快审核您的内容。");
+    
+    // 清空表单
+    document.getElementById('submitName').value = "";
+    document.getElementById('submitTitle').value = "";
+    document.getElementById('submitContent').value = "";
+    document.getElementById('submitImages').value = "";
+    document.getElementById('imagePreview').innerHTML = "";
+
+    showNewsList();
+  } catch (error) {
+    console.error("提交失败:", error);
+    alert("❌ 投稿失败，请稍后再试！");
+  }
+}
+
 
     // 页面加载完成后初始化
     window.addEventListener('DOMContentLoaded', async () => {
