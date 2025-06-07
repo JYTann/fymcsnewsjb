@@ -1033,16 +1033,18 @@
       apiKey: "AIzaSyBRnuwJhNE8zgWSZ2USJT5pCh138ik4G54",
       authDomain: "fymcsnewsjb.firebaseapp.com",
       projectId: "fymcsnewsjb",
-      storageBucket: "fymcsnewsjb.appspot.com",
+      storageBucket: "fymcsnewsjb.firebasestorage.app",
       messagingSenderId: "843017779813",
       appId: "1:843017779813:web:180674b052abbf9b36248c",
       measurementId: "G-M9L0H4E2FR"
     };
 
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-let editingId = null;
-let role = "";
+    const storage = firebase.storage();
+    let editingId = null;
+    let role = "";
 
     // 页面元素引用
     const editor = document.getElementById("editor");
@@ -1802,6 +1804,24 @@ async function loadNewsForAdmin() {
         });
       });
 
+      document.getElementById('submitImages').addEventListener('change', function() {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = "";
+    const files = Array.from(this.files).slice(0, 3);
+    
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.width = '100px';
+        img.style.borderRadius = '8px';
+        preview.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
       // 删除按钮事件绑定
       document.querySelectorAll('.delete-news').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1866,10 +1886,11 @@ async function submitNews() {
     return;
   }
 
-  const storage = firebase.storage();
-  const imageUrls = [];
-
   try {
+    const storage = firebase.storage();
+    const imageUrls = [];
+
+    // 上传图片
     for (const file of files) {
       const ref = storage.ref().child(`submissions/${Date.now()}_${file.name}`);
       await ref.put(file);
@@ -1877,7 +1898,8 @@ async function submitNews() {
       imageUrls.push(url);
     }
 
-    const data = {
+    // 保存投稿数据
+    await db.collection("submissions").add({
       name,
       title,
       content,
@@ -1885,22 +1907,13 @@ async function submitNews() {
       time: new Date().toISOString(),
       status: 'pending',
       images: imageUrls
-    };
+    });
 
-    await db.collection("submissions").add(data);
     alert("✅ 投稿成功！我们将尽快审核您的内容。");
-    
-    // 清空表单
-    document.getElementById('submitName').value = "";
-    document.getElementById('submitTitle').value = "";
-    document.getElementById('submitContent').value = "";
-    document.getElementById('submitImages').value = "";
-    document.getElementById('imagePreview').innerHTML = "";
-
     showNewsList();
   } catch (error) {
-    console.error("提交失败:", error);
-    alert("❌ 投稿失败，请稍后再试！");
+    console.error("投稿失败:", error);
+    alert("❌ 投稿失败: " + error.message);
   }
 }
 
