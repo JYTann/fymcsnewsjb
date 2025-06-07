@@ -1396,19 +1396,19 @@ let role = "";
     }
 
     async function loadSubmissions() {
-  const container = document.getElementById("submissionContainer");
-  try {
-    const snapshot = await db.collection("submissions").orderBy("time", "desc").get();
-    if (snapshot.empty) {
-      container.innerHTML = `<p style="text-align: center; color: var(--color-meta);">暂无投稿</p>`;
-      return;
-    }
-
-    container.innerHTML = snapshot.docs.map(doc => {
-      const s = doc.data();
-      const images = (s.images || []).map(url => `<img src="${url}" style="width: 100px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-right: 0.5rem;">`).join("");
-      return `
-        <div class="card" data-id="${doc.id}">
+      const container = document.getElementById("submissionContainer");
+      try {
+        const snapshot = await db.collection("submissions").orderBy("time", "desc").get();
+        if (snapshot.empty) {
+          container.innerHTML = `<p style="text-align: center; color: var(--color-meta);">暂无投稿</p>`;
+          return;
+        }
+        
+        container.innerHTML = snapshot.docs.map(doc => {
+          const s = doc.data();
+          const images = (s.images || []).map(url => `<img src="${url}" style="width: 100px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-right: 0.5rem;">`).join("");
+          return `
+          <div class="card" data-id="${doc.id}">
           <div class="news-meta">
             <span><i class="fas fa-user"></i> ${s.name}</span>
             <span><i class="fas fa-calendar-alt"></i> ${formatDate(s.time)}</span>
@@ -1425,43 +1425,42 @@ let role = "";
               <i class="fas fa-trash"></i> 删除投稿
             </button>
           </div>
-        </div>
-      `;
-    }).join("");
-
-  } catch (error) {
-    console.error("加载投稿失败：", error);
-    container.innerHTML = `<p style="text-align: center; color: var(--color-accent);">加载失败，请刷新</p>`;
-  }
-}
+          </div>
+          `;
+        }).join("");
+      
+      } catch (error) {
+        console.error("加载投稿失败：", error);
+        container.innerHTML = `<p style="text-align: center; color: var(--color-accent);">加载失败，请刷新</p>`;
+      }
+    }
 
     async function approveSubmission(id) {
-  try {
-    const doc = await db.collection("submissions").doc(id).get();
-    if (!doc.exists) return;
-
-    const data = doc.data();
-
-    await db.collection("news").add({
-      title: data.title,
-      content: data.content,
-      category: data.category,
-      editor: data.name || "投稿者",
-      time: new Date().toISOString(),
-      status: "published",
-      pinned: false,
-      images: data.images || []
-    });
-
-    await db.collection("submissions").doc(id).delete();
-    alert("✅ 投稿已发布为新闻！");
-    await loadSubmissions();
-    await loadNewsForAdmin();
-  } catch (error) {
-    console.error("发布失败：", error);
-    alert("❌ 发布失败！");
-  }
-}
+      try {
+        const doc = await db.collection("submissions").doc(id).get();
+        if (!doc.exists) return;
+        
+        const data = doc.data();
+        await db.collection("news").add({
+          title: data.title,
+          content: data.content,
+          category: data.category,
+          editor: data.name || "投稿者",
+          time: new Date().toISOString(),
+          status: "published",
+          pinned: false,
+          images: data.images || []
+        });
+        
+        await db.collection("submissions").doc(id).delete();
+        alert("✅ 投稿已发布为新闻！");
+        await loadSubmissions();
+        await loadNewsForAdmin();
+      } catch (error) {
+        console.error("发布失败：", error);
+        alert("❌ 发布失败！");
+      }
+    }
 
 async function deleteSubmission(id) {
   if (!confirm("⚠️ 确定删除这条投稿？")) return;
