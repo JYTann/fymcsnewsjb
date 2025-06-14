@@ -574,6 +574,127 @@
       margin-left: 0.5rem;
     }
 
+    /* 新增封面滚动样式 */
+.news-carousel {
+  width: 100%;
+  height: 400px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px var(--color-shadow);
+}
+
+.carousel-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2rem;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.carousel-slide.active {
+  opacity: 1;
+}
+
+.carousel-content {
+  background: rgba(0,0,0,0.6);
+  padding: 1.5rem;
+  border-radius: 8px;
+  max-width: 80%;
+}
+
+.carousel-content h3 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.carousel-content p {
+  margin-bottom: 0;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.carousel-nav {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.carousel-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.carousel-dot.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+.carousel-control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s;
+}
+
+.carousel-control:hover {
+  background: rgba(0,0,0,0.8);
+}
+
+.carousel-prev {
+  left: 20px;
+}
+
+.carousel-next {
+  right: 20px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .news-carousel {
+    height: 300px;
+  }
+  
+  .carousel-content {
+    max-width: 100%;
+    padding: 1rem;
+  }
+  
+  .carousel-content h3 {
+    font-size: 1.4rem;
+  }
+}
+
     .published {
       background: var(--color-success);
       color: white;
@@ -946,6 +1067,17 @@
             </select>
           </div>
         </div>
+        <!-- 封面滚动区域 -->
+<div class="news-carousel" id="newsCarousel">
+  <!-- 幻灯片将通过JavaScript动态生成 -->
+  <button class="carousel-control carousel-prev">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+  <button class="carousel-control carousel-next">
+    <i class="fas fa-chevron-right"></i>
+  </button>
+  <div class="carousel-nav"></div>
+</div>
         <div class="news-grid" id="newsItems">
           <div class="loading">
             <div class="loading-spinner"></div>
@@ -1351,7 +1483,7 @@ let role = "";
         }
         
         // 重新加载新闻列表
-        await loadNewsForAdmin();
+        await NewsForAdmin();
         
       } catch (error) {
         console.error("保存草稿失败:", error);
@@ -1548,55 +1680,165 @@ async function loadNewsForAdmin() {
     
     // 加载新闻列表
     async function loadNewsList() {
-      try {
-        const category = categoryFilter.value;
-        const news = await getNewsByCategory(category);
-        
-        // 按时间降序排序
-        news.sort((a, b) => new Date(b.time) - new Date(a.time));
-        const container = document.getElementById("newsItems");
-        
-        if (news.length === 0) {
-          container.innerHTML = `
-          <div class="card">
-          <p style="text-align: center; color: var(--color-meta);">
-            暂无新闻
-            </p>
-            </div>
-            `;
-          return;
-        }
-        
-        container.innerHTML = news.map(n => `
-        <div class="card news-card clickable" data-id="${n.id}">
-        <div class="news-meta">
-        <span><i class="fas fa-calendar-alt"></i> ${formatDate(n.time)}</span>
-        <span class="category-tag">${n.category}</span>
-        </div>
-        <h3>${n.title}</h3>
-        <div class="news-excerpt">
-        ${stripHtml(n.content).substring(0, 100)}...
-        </div>
-        </div>
-        `).join("");
-        
-        // 添加点击事件
-        document.querySelectorAll('.news-card').forEach(card => {
-          card.addEventListener('click', () => {
-            showNewsDetail(card.dataset.id);
-          });
-        });
-      } catch (error) {
-        console.error("加载新闻列表失败:", error);
-        document.getElementById("newsItems").innerHTML = `
-        <div class="card">
-        <p style="text-align: center; color: var(--color-accent);">
-        <i class="fas fa-exclamation-triangle"></i> 加载新闻列表失败: ${error.message}
+  try {
+    const category = categoryFilter.value;
+    const news = await getNewsByCategory(category);
+    
+    // 按时间降序排序
+    news.sort((a, b) => new Date(b.time) - new Date(a.time));
+    const container = document.getElementById("newsItems");
+    
+    // 初始化封面滚动
+    initCarousel(news.filter(n => n.pinned).slice(0, 5)); // 最多显示5条置顶新闻
+    
+    if (news.length === 0) {
+      container.innerHTML = `
+      <div class="card">
+      <p style="text-align: center; color: var(--color-meta);">
+        暂无新闻
         </p>
         </div>
         `;
-      }
+      return;
     }
+    
+    container.innerHTML = news.map(n => `
+    <div class="card news-card clickable" data-id="${n.id}">
+    <div class="news-meta">
+    <span><i class="fas fa-calendar-alt"></i> ${formatDate(n.time)}</span>
+    <span class="category-tag">${n.category}</span>
+    </div>
+    <h3>${n.title}</h3>
+    <div class="news-excerpt">
+    ${stripHtml(n.content).substring(0, 100)}...
+    </div>
+    </div>
+    `).join("");
+    
+    // 添加点击事件
+    document.querySelectorAll('.news-card').forEach(card => {
+      card.addEventListener('click', () => {
+        showNewsDetail(card.dataset.id);
+      });
+    });
+  } catch (error) {
+    console.error("加载新闻列表失败:", error);
+    document.getElementById("newsItems").innerHTML = `
+    <div class="card">
+    <p style="text-align: center; color: var(--color-accent);">
+    <i class="fas fa-exclamation-triangle"></i> 加载新闻列表失败: ${error.message}
+    </p>
+    </div>
+    `;
+  }
+}
+
+// 新增封面滚动功能
+function initCarousel(newsItems) {
+  const carousel = document.getElementById('newsCarousel');
+  const navContainer = carousel.querySelector('.carousel-nav');
+  const prevBtn = carousel.querySelector('.carousel-prev');
+  const nextBtn = carousel.querySelector('.carousel-next');
+  
+  // 如果没有置顶新闻，隐藏轮播
+  if (!newsItems || newsItems.length === 0) {
+    carousel.style.display = 'none';
+    return;
+  }
+  
+  // 清空现有内容
+  carousel.querySelectorAll('.carousel-slide').forEach(slide => slide.remove());
+  navContainer.innerHTML = '';
+  
+  // 创建幻灯片
+  newsItems.forEach((item, index) => {
+    const slide = document.createElement('div');
+    slide.className = 'carousel-slide';
+    slide.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('${item.imageUrl || 'https://i.postimg.cc/cLL4VqKS/1530689364-computer-society-removebg-preview.png'}')`;
+    slide.innerHTML = `
+      <div class="carousel-content">
+        <h3>${item.title}</h3>
+        <p>${stripHtml(item.content).substring(0, 100)}...</p>
+        <button class="btn btn-outline read-more" data-id="${item.id}" style="margin-top: 1rem; color: white; border-color: white;">
+          <i class="fas fa-book-open"></i> 阅读更多
+        </button>
+      </div>
+    `;
+    carousel.appendChild(slide);
+    
+    // 创建导航点
+    const dot = document.createElement('div');
+    dot.className = 'carousel-dot';
+    dot.dataset.index = index;
+    navContainer.appendChild(dot);
+  });
+  
+  // 设置初始状态
+  let currentIndex = 0;
+  const slides = carousel.querySelectorAll('.carousel-slide');
+  const dots = navContainer.querySelectorAll('.carousel-dot');
+  
+  function showSlide(index) {
+    slides.forEach(slide => slide.classList.remove('active'));
+    dots.forEach(dot => dot.classList.remove('active'));
+    
+    slides[index].classList.add('active');
+    dots[index].classList.add('active');
+    currentIndex = index;
+  }
+  
+  // 初始显示第一张
+  showSlide(0);
+  
+  // 自动轮播
+  let interval = setInterval(() => {
+    const nextIndex = (currentIndex + 1) % slides.length;
+    showSlide(nextIndex);
+  }, 5000);
+  
+  // 鼠标悬停暂停轮播
+  carousel.addEventListener('mouseenter', () => {
+    clearInterval(interval);
+  });
+  
+  carousel.addEventListener('mouseleave', () => {
+    interval = setInterval(() => {
+      const nextIndex = (currentIndex + 1) % slides.length;
+      showSlide(nextIndex);
+    }, 5000);
+  });
+  
+  // 导航点点击
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      clearInterval(interval);
+      showSlide(parseInt(dot.dataset.index));
+    });
+  });
+  
+  // 上一张/下一张按钮
+  prevBtn.addEventListener('click', () => {
+    clearInterval(interval);
+    const prevIndex = (currentIndex - 1 + slides.length) % slides.length;
+    showSlide(prevIndex);
+  });
+  
+  nextBtn.addEventListener('click', () => {
+    clearInterval(interval);
+    const nextIndex = (currentIndex + 1) % slides.length;
+    showSlide(nextIndex);
+  });
+  
+  // 阅读更多按钮事件委托
+  carousel.addEventListener('click', (e) => {
+    if (e.target.closest('.read-more')) {
+      const id = e.target.closest('.read-more').dataset.id;
+      showNewsDetail(id);
+    }
+  });
+}
+        
+        
     // 显示新闻详情
     async function showNewsDetail(id) {
       try {
