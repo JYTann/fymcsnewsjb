@@ -551,6 +551,43 @@
       margin-bottom: 1.5rem;
     }
 
+    /* 封面图片管理样式 */
+.carousel-image-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background: var(--color-card);
+}
+
+.carousel-image-preview {
+  width: 150px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-right: 1rem;
+}
+
+.carousel-image-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.carousel-image-url {
+  flex-grow: 1;
+  padding: 0.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
     .category-tag {
       display: inline-block;
       padding: 0.3rem 0.8rem;
@@ -928,7 +965,7 @@
 
     <!-- 后台管理 -->
     <section id="dashboard" class="hidden">
-      <div class="card">
+      <div class="">
         <div class="editor-header">
           <h2 class="editor-title"><i class="fas fa-newspaper"></i> 发布新闻</h2>
         </div>
@@ -1030,6 +1067,31 @@
             <div class="loading-spinner"></div>
           </div>
         </div>
+
+        <!-- 在dashboard部分的card后面添加 -->
+<div class="card">
+  <div class="editor-header">
+    <h2 class="editor-title"><i class="fas fa-images"></i> 封面图片管理</h2>
+  </div>
+  
+  <div id="carouselImagesContainer">
+    <div class="loading">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+  
+  <div style="margin-top: 1.5rem;">
+    <label>上传新封面图片：</label>
+    <input type="file" id="carouselImageUpload" accept="image/*" class="full-width">
+    <div id="imagePreview" style="margin-top: 1rem;"></div>
+    
+    <div class="action-buttons" style="margin-top: 1rem;">
+      <button class="btn btn-primary" id="uploadCarouselImage">
+        <i class="fas fa-upload"></i> 上传图片
+      </button>
+    </div>
+  </div>
+</div>
 
         <!-- 投稿审核管理 -->
 <section id="submissionReview" class="hidden">
@@ -1171,7 +1233,7 @@
       measurementId: "G-M9L0H4E2FR"
     };
 
-    firebase.initializeApp(firebaseConfig);
+    firebase.App(firebaseConfig);
     const db = firebase.firestore();
 let editingId = null;
 let role = "";
@@ -1960,7 +2022,221 @@ function initCarousel(newsItems) {
           </div>
         `;
       }
+      
+      if (role === 'admin') {
+    // 加载封面图片
+    loadCarouselImages();
+    
+    // 绑定上传按钮事件
+    document.getElementById('uploadCarouselImage').addEventListener('click', uploadCarouselImage);
+  }
     }
+
+async function loadCarouselImages() {
+  try {
+    const container = document.getElementById('carouselImagesContainer');
+    container.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+    
+    const snapshot = await db.collection('carouselImages').orderBy('uploadedAt', 'desc').get();
+    
+    if (snapshot.empty) {
+      container.innerHTML = '<p style="text-align: center; color: var(--color-meta);">暂无封面图片</p>';
+      return;
+    }
+    
+    container.innerHTML = '';
+    
+    snapshot.forEach(doc => {
+      const image = doc.data();
+      const item = document.createElement('div');
+      item.className = 'carousel-image-item';
+      item.dataset.id = doc.id;
+      item.innerHTML = `
+        <img src="${image.url}" class="carousel-image-preview">
+        <div class="carousel-image-url">${image.url}</div>
+        <div class="carousel-image-actions">
+          <button class="btn btn-danger delete-carousel-image" data-id="${doc.id}">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+    
+    // 绑定删除按钮事件
+    document.querySelectorAll('.delete-carousel-image').forEach(btn => {
+      btn.addEventListener('click', () => deleteCarouselImage(btn.dataset.id));
+    });
+    
+  } catch (error) {
+    console.error('加载封面图片失败:', error);
+    document.getElementById('carouselImagesContainer').innerHTML = `
+      <p style="text-align: center; color: var(--color-accent);">
+        <i class="fas fa-exclamation-triangle"></i> 加载失败，请刷新重试
+      </p>
+    `;
+  }
+}
+
+// 上传封面图片
+async function uploadCarouselImage() {
+  const fileInput = document.getElementById('carouselImageUpload');
+  const preview = document.getElementById('imagePreview');
+  
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('请选择要上传的图片');
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  
+  try {
+    // 显示上传状态
+    const uploadBtn = document.getElementById('uploadCarouselImage');
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+    
+    // 上传到Firebase Storage
+    const storageRef = firebase.storage().ref();
+    const fileRef = storageRef.child(`carousel/${Date.now()}_${file.name}`);
+    const uploadTask = fileRef.put(file);
+    
+    // 监听上传进度
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        // 可以在这里添加进度条
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('上传进度: ' + progress + '%');
+      },
+      (error) => {
+        console.error('上传失败:', error);
+        alert('上传失败: ' + error.message);
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 上传图片';
+      },
+      async () => {
+        // 上传完成，获取下载URL
+        const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+        
+        // 保存到Firestore
+        await db.collection('carouselImages').add({
+          url: downloadURL,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: '管理员'
+        });
+        
+        // 重置表单
+        fileInput.value = '';
+        preview.innerHTML = '';
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 上传图片';
+        
+        // 重新加载图片列表
+        await loadCarouselImages();
+        alert('图片上传成功！');
+      }
+    );
+    
+  } catch (error) {
+    console.error('上传出错:', error);
+    alert('上传出错: ' + error.message);
+    document.getElementById('uploadCarouselImage').disabled = false;
+    document.getElementById('uploadCarouselImage').innerHTML = '<i class="fas fa-upload"></i> 上传图片';
+  }
+}
+
+// 删除封面图片
+async function deleteCarouselImage(id) {
+  if (!confirm('确定要删除这张封面图片吗？')) return;
+  
+  try {
+    // 从Firestore删除记录
+    await db.collection('carouselImages').doc(id).delete();
+    
+    // 重新加载图片列表
+    await loadCarouselImages();
+    alert('图片删除成功！');
+  } catch (error) {
+    console.error('删除失败:', error);
+    alert('删除失败: ' + error.message);
+  }
+}
+
+// 修改initCarousel函数，使用上传的封面图片
+async function initCarousel(newsItems) {
+  const carousel = document.getElementById('newsCarousel');
+  const navContainer = carousel.querySelector('.carousel-nav');
+  const prevBtn = carousel.querySelector('.carousel-prev');
+  const nextBtn = carousel.querySelector('.carousel-next');
+  
+  // 获取封面图片
+  let carouselImages = [];
+  try {
+    const snapshot = await db.collection('carouselImages').orderBy('uploadedAt', 'desc').limit(5).get();
+    carouselImages = snapshot.docs.map(doc => doc.data().url);
+  } catch (error) {
+    console.error('加载封面图片失败:', error);
+  }
+  
+  // 如果没有封面图片和置顶新闻，隐藏轮播
+  if ((!carouselImages || carouselImages.length === 0) && 
+      (!newsItems || newsItems.length === 0)) {
+    carousel.style.display = 'none';
+    return;
+  }
+  
+  // 清空现有内容
+  carousel.querySelectorAll('.carousel-slide').forEach(slide => slide.remove());
+  navContainer.innerHTML = '';
+  
+  // 创建幻灯片 - 优先使用上传的封面图片
+  if (carouselImages && carouselImages.length > 0) {
+    carouselImages.forEach((imageUrl, index) => {
+      const slide = document.createElement('div');
+      slide.className = 'carousel-slide';
+      slide.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('${imageUrl}')`;
+      slide.innerHTML = `
+        <div class="carousel-content">
+          <h3>精选封面</h3>
+          <p>电脑协会精彩活动</p>
+        </div>
+      `;
+      carousel.appendChild(slide);
+      
+      // 创建导航点
+      const dot = document.createElement('div');
+      dot.className = 'carousel-dot';
+      dot.dataset.index = index;
+      navContainer.appendChild(dot);
+    });
+  } 
+  // 如果没有上传的封面图片，使用置顶新闻
+  else if (newsItems && newsItems.length > 0) {
+    newsItems.forEach((item, index) => {
+      const slide = document.createElement('div');
+      slide.className = 'carousel-slide';
+      slide.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('${item.imageUrl || 'https://i.postimg.cc/cLL4VqKS/1530689364-computer-society-removebg-preview.png'}')`;
+      slide.innerHTML = `
+        <div class="carousel-content">
+          <h3>${item.title}</h3>
+          <p>${stripHtml(item.content).substring(0, 100)}...</p>
+          <button class="btn btn-outline read-more" data-id="${item.id}" style="margin-top: 1rem; color: white; border-color: white;">
+            <i class="fas fa-book-open"></i> 阅读更多
+          </button>
+        </div>
+      `;
+      carousel.appendChild(slide);
+      
+      // 创建导航点
+      const dot = document.createElement('div');
+      dot.className = 'carousel-dot';
+      dot.dataset.index = index;
+      navContainer.appendChild(dot);
+    });
+  }
+  
+  // 其余轮播逻辑保持不变...
+}
 
     function bindPinButtons() {
       document.querySelectorAll('.pin-news').forEach(btn => {
