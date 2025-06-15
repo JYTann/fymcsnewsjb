@@ -1808,42 +1808,41 @@ async function loginAs(selectedRole) {
       }
     }
 
-    // 保存为草稿
     async function saveAsDraft() {
-      const title = titleInput.value.trim();
-      const content = editor.innerHTML.trim();
-      const category = categorySelect.value;
-      
-      if (!title && !content) return alert("⚠️ 请输入标题或内容！");
+  const title = titleInput.value.trim();
+  const content = editor.innerHTML.trim();
+  const category = categorySelect.value;
+  
+  if (!title && !content) return alert("⚠️ 请输入标题或内容！");
 
-      try {
-        const newsItem = {
-          title: title || "无标题",
-          content: content || "<p>无内容</p>",
-          category,
-          editor: "管理员",
-          time: new Date().toISOString(),  // 改为ISO格式时间
-          status: 'draft'
-        };
-        
-        if (editingId) {
-          // 更新现有草稿
-          await db.collection("news").doc(editingId).update(newsItem);
-          alert("📝 草稿更新成功！");
-        } else {
-          // 新增草稿
-          await db.collection("news").add(newsItem);
-          alert("📝 草稿保存成功！");
-        }
-        
-        // 重新加载新闻列表
-        await NewsForAdmin();
-        
-      } catch (error) {
-        console.error("保存草稿失败:", error);
-        alert("❌ 保存草稿失败，请重试！错误信息: " + error.message);
-      }
+  try {
+    const newsItem = {
+      title: title || "无标题",
+      content: content || "<p>无内容</p>",
+      category,
+      editor: "管理员",
+      time: new Date().toISOString(),
+      status: 'draft'
+    };
+    
+    if (editingId) {
+      // 更新现有草稿
+      await db.collection("news").doc(editingId).update(newsItem);
+      alert("📝 草稿更新成功！");
+    } else {
+      // 新增草稿
+      await db.collection("news").add(newsItem);
+      alert("📝 草稿保存成功！");
     }
+    
+    // 重新加载新闻列表
+    await loadNewsForAdmin(); // 这里修正了函数名
+    
+  } catch (error) {
+    console.error("保存草稿失败:", error);
+    alert("❌ 保存草稿失败，请重试！错误信息: " + error.message);
+  }
+}
 
     // 新闻删除功能
     async function deleteNews(id) {
