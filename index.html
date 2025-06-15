@@ -2353,6 +2353,39 @@ document.getElementById('submitComment').addEventListener('click', () => {
   submitComment(id);
 });
 }
+    async function loadComments(newsId) {
+  const commentList = document.getElementById("commentList");
+  commentList.innerHTML = '<p style="color: var(--color-meta);">正在加载评论...</p>';
+
+  try {
+    const snapshot = await db.collection("comments")
+      .where("newsId", "==", newsId)
+      .orderBy("time", "desc")
+      .get();
+
+    if (snapshot.empty) {
+      commentList.innerHTML = '<p style="color: var(--color-meta);">暂无评论</p>';
+      return;
+    }
+
+    commentList.innerHTML = snapshot.docs.map(doc => {
+      const c = doc.data();
+      return `
+        <div class="comment-item">
+          <div>
+            <span class="comment-author">${c.name || "匿名"}</span>
+            <span class="comment-time">${new Date(c.time).toLocaleString('zh-CN')}</span>
+          </div>
+          <div class="comment-content">${c.content}</div>
+        </div>
+      `;
+    }).join("");
+  } catch (error) {
+    console.error("评论加载失败：", error);
+    commentList.innerHTML = '<p style="color: var(--color-accent);">评论加载失败，请稍后重试。</p>';
+  }
+    }
+    
 
     // 返回新闻列表
     function showNewsList() {
