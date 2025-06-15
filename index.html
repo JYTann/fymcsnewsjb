@@ -2177,47 +2177,27 @@ function showToast(message, type = 'info') {
 
     async function uploadCarouselImage() {
   const fileInput = document.getElementById('carouselImageUpload');
-  const preview = document.getElementById('imagePreview');
-  
-  if (!fileInput.files || fileInput.files.length === 0) {
-    showToast('请选择要上传的图片', 'error');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert("请选择图片");
     return;
   }
-  
-  const file = fileInput.files[0];
-  const uploadBtn = document.getElementById('uploadCarouselImage');
-  
+
   try {
-    uploadBtn.disabled = true;
-    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
-    
-    // 1. 上传到Storage
+    // ✅ 创建 Storage 引用
     const storageRef = firebase.storage().ref();
     const fileRef = storageRef.child(`carousel/${Date.now()}_${file.name}`);
-    const uploadTask = fileRef.put(file);
-    
-    // 2. 获取下载URL并保存到Firestore
-    const snapshot = await uploadTask;
+
+    // 上传文件
+    const snapshot = await fileRef.put(file);
     const downloadURL = await snapshot.ref.getDownloadURL();
-    
-    await db.collection('carouselImages').add({
-      url: downloadURL,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: '管理员'
-    });
-    
-    // 3. 重置表单
-    fileInput.value = '';
-    preview.innerHTML = '';
-    showToast('图片上传成功', 'success');
-    loadCarouselImages(); // 刷新列表
-    
+
+    console.log("图片上传成功！URL:", downloadURL);
+    return downloadURL;
   } catch (error) {
-    console.error('上传失败:', error);
-    showToast('上传失败: ' + error.message, 'error');
-  } finally {
-    uploadBtn.disabled = false;
-    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 上传图片';
+    console.error("上传失败:", error);
+    alert("上传失败: " + error.message);
   }
 }
 
