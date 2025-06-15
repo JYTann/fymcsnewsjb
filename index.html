@@ -1729,41 +1729,20 @@ let role = "";
     }
 
     // 用户登录系统
-// 修改登录函数
 async function loginAs(selectedRole, email = null, password = null) {
-  try {
-    if (selectedRole === 'admin') {
-      // 管理员登录
-      if (password !== "Microcomputersociety") {
-        throw new Error("管理员密码错误");
-      }
-      role = "admin";
-    } else if (selectedRole === 'user') {
-      // 普通用户登录
-      await firebase.auth().signInWithEmailAndPassword(email, password);
-      role = "user";
-    } else {
-      // 访客
-      role = "guest";
-    }
-
-    document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
-    logoutBtn.classList.remove('hidden');
-    
-    if (role === 'admin') {
-      document.getElementById('dashboard').classList.remove('hidden');
-      await loadNewsForAdmin();
-      loadCarouselImages();
-    } else {
-      document.getElementById('newsList').classList.remove('hidden');
-      await loadNewsList();
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("登录失败:", error);
-    showToast(`登录失败: ${error.message}`, 'error');
-    return false;
+  role = selectedRole; // 设置角色
+  
+  // 隐藏所有界面，显示对应角色的界面
+  document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+  logoutBtn.classList.remove('hidden');
+  
+  if (role === 'admin') {
+    document.getElementById('dashboard').classList.remove('hidden');
+    await loadNewsForAdmin();
+  } else {
+    // 用户和访客都进入新闻列表
+    document.getElementById('newsList').classList.remove('hidden');
+    await loadNewsList();
   }
 }
 
@@ -2815,7 +2794,7 @@ document.getElementById('submitComment').addEventListener('click', () => {
       });
 
       // 添加用户登录按钮绑定
-  document.getElementById('userLoginBtn')?.addEventListener('click', showUserLoginModal);
+  document.getElementById('userLoginBtn').addEventListener('click', showUserLoginModal);
   
   // 评论表单提交
   document.getElementById('submitComment')?.addEventListener('click', function() {
