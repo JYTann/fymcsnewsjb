@@ -766,6 +766,77 @@
       animation: spin 1.5s linear infinite;
     }
 
+    /* 封面图片网格布局 */
+.carousel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* 上传区域 */
+.upload-section {
+  border: 2px dashed var(--color-border);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.upload-area {
+  padding: 2rem;
+  cursor: pointer;
+}
+
+.upload-area:hover {
+  background: rgba(var(--color-primary-rgb), 0.05);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: var(--color-primary);
+  margin-bottom: 1rem;
+}
+
+.upload-meta {
+  margin-top: 1rem;
+  color: var(--color-meta);
+  font-size: 0.9rem;
+}
+
+/* 图片预览卡片 */
+.carousel-image-card {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  transition: transform 0.3s;
+}
+
+.carousel-image-card:hover {
+  transform: translateY(-5px);
+}
+
+.carousel-image-preview {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.carousel-image-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* 拖拽效果 */
+.drag-over {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-color: var(--color-primary);
+}
+
     /* 新增浮动操作按钮 */
     .floating-action-btn {
       position: fixed;
@@ -1306,27 +1377,37 @@ input:checked + .slider:before {
       </div>
 
       <!-- 放在dashboard部分的card后面 -->
-<div class="card">
+<div c<div class="card">
   <div class="editor-header">
     <h2 class="editor-title"><i class="fas fa-images"></i> 封面图片管理</h2>
   </div>
   
-  <!-- 封面图片列表容器 -->
-  <div id="carouselImagesContainer">
+  <!-- 图片列表容器 -->
+  <div id="carouselImagesContainer" class="carousel-grid">
     <div class="loading">
       <div class="loading-spinner"></div>
     </div>
   </div>
   
-  <!-- 上传新图片区域 -->
-  <div style="margin-top: 1.5rem;">
-    <label>上传新封面图片：</label>
-    <input type="file" id="carouselImageUpload" accept="image/*" class="full-width">
-    <div id="imagePreview" style="margin-top: 1rem;"></div>
+  <!-- 上传区域 -->
+  <div class="upload-section">
+    <div class="upload-area" id="dropZone">
+      <i class="fas fa-cloud-upload-alt upload-icon"></i>
+      <h3>拖放图片到此处</h3>
+      <p>或</p>
+      <label for="carouselImageUpload" class="btn btn-outline">
+        <i class="fas fa-folder-open"></i> 选择文件
+      </label>
+      <input type="file" id="carouselImageUpload" accept="image/*" style="display: none;">
+    </div>
     
-    <div class="action-buttons" style="margin-top: 1rem;">
-      <button class="btn btn-primary" id="uploadCarouselImage">
-        <i class="fas fa-upload"></i> 上传图片
+    <div class="upload-meta">
+      <p><i class="fas fa-info-circle"></i> 支持 JPG/PNG 格式，建议尺寸 1200×600px</p>
+    </div>
+    
+    <div class="action-buttons">
+      <button id="uploadCarouselImage" class="btn btn-primary" disabled>
+        <i class="fas fa-upload"></i> 开始上传
       </button>
     </div>
   </div>
@@ -1543,6 +1624,54 @@ let role = "";
     const adminModal = document.getElementById("adminModal");
     const adminPassword = document.getElementById("adminPassword");
     const themeToggle = document.querySelector(".theme-toggle");
+    // 拖拽上传功能
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('carouselImageUpload');
+
+// 拖拽效果
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) {
+    fileInput.files = e.dataTransfer.files;
+    updatePreview();
+  }
+});
+
+// 文件选择处理
+fileInput.addEventListener('change', updatePreview);
+
+function updatePreview() {
+  const file = fileInput.files[0];
+  const uploadBtn = document.getElementById('uploadCarouselImage');
+  
+  if (file) {
+    // 显示文件名
+    dropZone.innerHTML = `
+      <i class="fas fa-file-image"></i>
+      <h3>${file.name}</h3>
+      <p>${(file.size / 1024).toFixed(1)} KB</p>
+    `;
+    uploadBtn.disabled = false;
+    
+    // 图片预览
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      dropZone.style.backgroundImage = `url(${e.target.result})`;
+      dropZone.style.backgroundSize = 'cover';
+    };
+    reader.readAsDataURL(file);
+  }
+}
 
     // 初始化数据库
     async function togglePinNews(id, isPinned) {
