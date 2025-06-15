@@ -2382,8 +2382,17 @@ document.getElementById('submitComment').addEventListener('click', () => {
       `;
     }).join("");
   } catch (error) {
-    console.error("评论加载失败：", error);
-    commentList.innerHTML = '<p style="color: var(--color-accent);">评论加载失败，请稍后重试。</p>';
+  console.error("评论加载失败：", error);
+  console.log("新闻ID:", newsId);
+  console.log("错误代码:", error.code);
+  console.log("错误信息:", error.message);
+  
+  commentList.innerHTML = `
+    <p style="color: var(--color-accent);">
+      <i class="fas fa-exclamation-triangle"></i> 评论加载失败: ${error.message}
+      ${error.code === 'permission-denied' ? ' (权限不足)' : ''}
+    </p>
+  `;
   }
     }
     
