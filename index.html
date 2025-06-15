@@ -1522,6 +1522,7 @@ input:checked + .slider:before {
     };
 
     firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
     const db = firebase.firestore();
 let editingId = null;
 let role = "";
