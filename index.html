@@ -1521,10 +1521,17 @@ input:checked + .slider:before {
       measurementId: "G-M9L0H4E2FR"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-let editingId = null;
-let role = "";
+    // 初始化 Firebase 核心服务
+firebase.initializeApp(firebaseConfig);
+
+// 初始化各模块（关键！按顺序无关，但建议集中放置）
+const db = firebase.firestore();     // Firestore 数据库
+const storage = firebase.storage();  // Storage 存储服务
+const auth = firebase.auth();        // 认证服务（如果用到）
+
+// 应用状态变量
+let editingId = null;  // 当前编辑的新闻 ID
+let role = "";         // 用户角色（admin/guest）
 
     // 页面元素引用
     const editor = document.getElementById("editor");
