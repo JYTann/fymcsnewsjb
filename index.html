@@ -1677,72 +1677,152 @@ async function deleteSubmission(id) {
     // 加载管理员界面
     // 管理员界面加载新闻
 async function loadNewsForAdmin() {
+  const container = document.getElementById("newsListAdmin");
+  const filter = newsFilter.value;
+  
   try {
-    const filter = newsFilter.value;
-    let news;
-
-    if (filter === 'drafts') {
-      news = await getNewsByStatus('draft');
-    } else if (filter === 'published') {
-      news = await getNewsByStatus('published');
-    } else {
-      // 修改这里：使用正确的查询方式获取所有新闻
-      const snapshot = await db.collection("news").orderBy("time", "desc").get();
-      news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Show loading state
+    container.innerHTML = `
+      <div class="card">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>正在加载新闻数据...</p>
+        </div>
+      </div>`;
+    
+    let news = [];
+    let query = db.collection("news");
+    
+    // Apply filters based on selection
+    switch(filter) {
+      case 'drafts':
+        query = query.where("status", "==", "draft");
+        break;
+      case 'published':
+        query = query.where("status", "==", "published");
+        break;
+      // 'all' case falls through to default
     }
-
-    const container = document.getElementById("newsListAdmin");
-
-    if (!news || news.length === 0) {
+    
+    // Always order by time descending
+    const snapshot = await query.orderBy("time", "desc").get();
+    news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Handle empty results
+    if (news.length === 0) {
       container.innerHTML = `
         <div class="card">
-          <p style="text-align: center; color: var(--color-meta);">暂无新闻</p>
+          <p style="text-align: center; color: var(--color-meta);">
+            <i class="fas fa-info-circle"></i> 
+            ${filter === 'drafts' ? '没有找到草稿' : 
+              filter === 'published' ? '没有已发布的新闻' : '没有找到任何新闻'}
+          </p>
           <div style="text-align: center; margin-top: 1rem;">
-            <button class="btn btn-outline" onclick="loadNewsForAdmin()">🔁 重新加载</button>
+            <button class="btn btn-primary" onclick="loadNewsForAdmin()">
+              <i class="fas fa-sync-alt"></i> 刷新
+            </button>
           </div>
         </div>`;
       return;
     }
-
-    // 渲染每条新闻
+    
+    // Render news cards
     container.innerHTML = news.map(n => generateNewsCard(n, true)).join("");
-
-    // 添加按钮监听器（编辑、删除、置顶）
-    document.querySelectorAll('.edit-news').forEach(btn => {
-      btn.addEventListener('click', () => {
-        editNews(btn.dataset.id);
-      });
-    });
-
-    document.querySelectorAll('.delete-news').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        if (confirm("⚠️ 确定要删除这条新闻吗？")) {
-          await deleteNewsById(id);
-          await loadNewsForAdmin(); // 重新加载
-        }
-      });
-    });
-
-    document.querySelectorAll('.pin-news').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        const isPinned = btn.innerText.includes("取消");
-        const success = await togglePinNews(id, !isPinned);
-        if (success) await loadNewsForAdmin();
-      });
-    });
-
+    
+    // Add event listeners
+    setupNewsCardEventListeners();
+    
+    // Show success message (optional)
+    showToast(`成功加载 ${news.length} 条新闻`, 'success');
+    
   } catch (error) {
     console.error("加载新闻列表失败:", error);
-    document.getElementById("newsListAdmin").innerHTML = `
+    
+    let errorMessage = "加载新闻失败";
+    if (error.code === 'permission-denied') {
+      errorMessage = "权限不足，无法加载新闻";
+    } else if (error.code === 'unavailable') {
+      errorMessage = "网络连接失败，请检查网络";
+    }
+    
+    container.innerHTML = `
       <div class="card">
         <p style="text-align: center; color: var(--color-accent);">
-          <i class="fas fa-exclamation-triangle"></i> 加载新闻失败，请刷新重试
+          <i class="fas fa-exclamation-triangle"></i> ${errorMessage}
         </p>
-      </div>
-    `;
+        <div style="text-align: center; margin-top: 1rem;">
+          <button class="btn btn-primary" onclick="loadNewsForAdmin()">
+            <i class="fas fa-sync-alt"></i> 重试
+          </button>
+        </div>
+        ${role === 'admin' ? `
+        <div style="text-align: center; margin-top: 0.5rem;">
+          <button class="btn btn-outline" onclick="location.reload()">
+            <i class="fas fa-redo"></i> 刷新页面
+          </button>
+        </div>
+        ` : ''}
+      </div>`;
   }
+}
+
+// Helper function to setup event listeners
+function setupNewsCardEventListeners() {
+  // Edit buttons
+  document.querySelectorAll('.edit-news').forEach(btn => {
+    btn.addEventListener('click', () => editNews(btn.dataset.id));
+  });
+  
+  // Delete buttons
+  document.querySelectorAll('.delete-news').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      if (confirm("⚠️ 确定要永久删除这条新闻吗？此操作无法撤销！")) {
+        try {
+          await deleteNewsById(id);
+          showToast("新闻已删除", 'success');
+          await loadNewsForAdmin();
+        } catch (error) {
+          showToast("删除失败: " + error.message, 'error');
+        }
+      }
+    });
+  });
+  
+  // Pin buttons
+  document.querySelectorAll('.pin-news').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const isPinned = btn.textContent.includes("取消");
+      
+      try {
+        const success = await togglePinNews(id, !isPinned);
+        if (success) {
+          showToast(isPinned ? "已取消置顶" : "新闻已置顶", 'success');
+          await loadNewsForAdmin();
+        }
+      } catch (error) {
+        showToast("操作失败: " + error.message, 'error');
+      }
+    });
+  });
+}
+
+// Simple toast notification function
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                     type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+    ${message}
+  `;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 500);
+  }, 3000);
 }
 
     async function loadCarouselImages() {
