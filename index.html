@@ -2353,6 +2353,7 @@ document.getElementById('submitComment').addEventListener('click', () => {
   submitComment(id);
 });
 }
+
     // 返回新闻列表
     function showNewsList() {
       document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
@@ -2387,39 +2388,38 @@ async function submitComment(newsId) {
   }
 }
 
-// 加载评论
 async function loadComments(newsId) {
-  const commentList = document.getElementById('commentList');
-  commentList.innerHTML = '<p>加载评论中...</p>';
-
+  const commentList = document.getElementById("commentList");
+  commentList.innerHTML = '<p>加载中...</p>';
+  
   try {
-    const snapshot = await db.collection('comments')
-      .where('newsId', '==', newsId)
-      .orderBy('time', 'desc')
+    const snapshot = await db.collection("comments")
+      .where("newsId", "==", newsId)
+      .orderBy("time", "desc")
       .get();
-
+    
     if (snapshot.empty) {
-      commentList.innerHTML = '<p>暂无评论，快来发表第一条评论吧！</p>';
+      commentList.innerHTML = '<p style="color: gray;">暂无评论</p>';
       return;
     }
 
     commentList.innerHTML = snapshot.docs.map(doc => {
-      const comment = doc.data();
+      const c = doc.data();
       return `
         <div class="comment-item">
-          <div>
-            <span class="comment-author">${comment.author}</span>
-            <span class="comment-time">${formatDate(comment.time)}</span>
-          </div>
-          <div class="comment-content">${comment.content}</div>
+          <div><span class="comment-author">${c.name || "匿名"}</span>
+               <span class="comment-time">${new Date(c.time).toLocaleString('zh-CN')}</span></div>
+          <div class="comment-content">${c.content}</div>
         </div>
       `;
-    }).join('');
-  } catch (error) {
-    console.error('加载评论失败:', error);
-    commentList.innerHTML = '<p>加载评论失败，请刷新重试</p>';
+    }).join("");
+
+  } catch (err) {
+    console.error("加载评论失败：", err);
+    commentList.innerHTML = '<p style="color: red;">评论加载失败，请稍后重试。</p>';
   }
 }
+
 
     // 初始化页面
     async function initialize() {
