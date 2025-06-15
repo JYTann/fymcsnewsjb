@@ -1721,6 +1721,7 @@ async function loginAs(selectedRole) {
     document.getElementById('dashboard').classList.remove('hidden');
     console.log("Loading admin news...");
     await loadNewsForAdmin();
+    await loadCarouselImages(); // 确保加载封面图片
     
     // 只在管理员登录时加载封面图片管理
     loadCarouselImages();
@@ -2115,45 +2116,61 @@ function showToast(message, type = 'info') {
     const container = document.getElementById('carouselImagesContainer');
     container.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
     
-    // 从Firestore获取封面图片数据
-    const snapshot = await db.collection('carouselImages').orderBy('uploadedAt', 'desc').get();
+    const snapshot = await db.collection('carouselImages')
+      .orderBy('uploadedAt', 'desc')
+      .get();
     
     if (snapshot.empty) {
       container.innerHTML = '<p style="text-align: center; color: var(--color-meta);">暂无封面图片</p>';
       return;
     }
     
-    container.innerHTML = '';
-    
-    // 显示每张封面图片
+    let html = '';
     snapshot.forEach(doc => {
       const image = doc.data();
-      const item = document.createElement('div');
-      item.className = 'carousel-image-item';
-      item.dataset.id = doc.id;
-      item.innerHTML = `
-        <img src="${image.url}" class="carousel-image-preview">
-        <div class="carousel-image-url">${image.url}</div>
-        <div class="carousel-image-actions">
-          <button class="btn btn-danger delete-carousel-image" data-id="${doc.id}">
-            <i class="fas fa-trash"></i> 删除
-          </button>
+      html += `
+        <div class="carousel-image-item" data-id="${doc.id}">
+          <img src="${image.url}" class="carousel-image-preview">
+          <div class="carousel-image-url">${image.url}</div>
+          <div class="carousel-image-actions">
+            <button class="btn btn-danger delete-carousel-image" data-id="${doc.id}">
+              <i class="fas fa-trash"></i> 删除
+            </button>
+          </div>
         </div>
       `;
-      container.appendChild(item);
     });
     
-    // 绑定删除按钮事件
+    container.innerHTML = html;
+
+    // 绑定删除事件
     document.querySelectorAll('.delete-carousel-image').forEach(btn => {
-      btn.addEventListener('click', () => deleteCarouselImage(btn.dataset.id));
+      btn.addEventListener('click', async () => {
+        if(confirm('确定删除这张封面图片吗？')) {
+          try {
+            await db.collection('carouselImages').doc(btn.dataset.id).delete();
+            loadCarouselImages(); // 重新加载
+            showToast('图片删除成功', 'success');
+          } catch (error) {
+            showToast('删除失败: ' + error.message, 'error');
+          }
+        }
+      });
     });
     
   } catch (error) {
     console.error('加载封面图片失败:', error);
     document.getElementById('carouselImagesContainer').innerHTML = `
-      <p style="text-align: center; color: var(--color-accent);">
-        <i class="fas fa-exclamation-triangle"></i> 加载失败，请刷新重试
-      </p>
+      <div class="card">
+        <p style="text-align: center; color: var(--color-accent);">
+          <i class="fas fa-exclamation-triangle"></i> 加载失败: ${error.message}
+        </p>
+        <div style="text-align: center; margin-top: 1rem;">
+          <button class="btn btn-primary" onclick="loadCarouselImages()">
+            <i class="fas fa-sync-alt"></i> 重新加载
+          </button>
+        </div>
+      </div>
     `;
   }
 }
@@ -2163,60 +2180,44 @@ function showToast(message, type = 'info') {
   const preview = document.getElementById('imagePreview');
   
   if (!fileInput.files || fileInput.files.length === 0) {
-    alert('请选择要上传的图片');
+    showToast('请选择要上传的图片', 'error');
     return;
   }
   
   const file = fileInput.files[0];
+  const uploadBtn = document.getElementById('uploadCarouselImage');
   
   try {
-    // 显示上传状态
-    const uploadBtn = document.getElementById('uploadCarouselImage');
     uploadBtn.disabled = true;
     uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
     
-    // 上传到Firebase Storage
+    // 1. 上传到Storage
     const storageRef = firebase.storage().ref();
     const fileRef = storageRef.child(`carousel/${Date.now()}_${file.name}`);
     const uploadTask = fileRef.put(file);
     
-    // 上传完成后处理
-    uploadTask.on('state_changed', 
-      null, 
-      (error) => {
-        console.error('上传失败:', error);
-        alert('上传失败: ' + error.message);
-        uploadBtn.disabled = false;
-        uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 上传图片';
-      },
-      async () => {
-        // 获取图片URL
-        const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-        
-        // 保存到Firestore
-        await db.collection('carouselImages').add({
-          url: downloadURL,
-          uploadedAt: new Date().toISOString(),
-          uploadedBy: '管理员'
-        });
-        
-        // 重置表单
-        fileInput.value = '';
-        preview.innerHTML = '';
-        uploadBtn.disabled = false;
-        uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 上传图片';
-        
-        // 重新加载图片列表
-        await loadCarouselImages();
-        alert('图片上传成功！');
-      }
-    );
+    // 2. 获取下载URL并保存到Firestore
+    const snapshot = await uploadTask;
+    const downloadURL = await snapshot.ref.getDownloadURL();
+    
+    await db.collection('carouselImages').add({
+      url: downloadURL,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: '管理员'
+    });
+    
+    // 3. 重置表单
+    fileInput.value = '';
+    preview.innerHTML = '';
+    showToast('图片上传成功', 'success');
+    loadCarouselImages(); // 刷新列表
     
   } catch (error) {
-    console.error('上传出错:', error);
-    alert('上传出错: ' + error.message);
-    document.getElementById('uploadCarouselImage').disabled = false;
-    document.getElementById('uploadCarouselImage').innerHTML = '<i class="fas fa-upload"></i> 上传图片';
+    console.error('上传失败:', error);
+    showToast('上传失败: ' + error.message, 'error');
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 上传图片';
   }
 }
 
