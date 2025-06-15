@@ -619,6 +619,30 @@
   to { opacity: 0; }
 }
 
+    .uploading {
+  position: relative;
+}
+
+.uploading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255,255,255,0.8);
+  z-index: 10;
+}
+
+.fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
     /* 新增封面滚动样式 */
 .news-carousel {
   width: 100%;
@@ -2307,27 +2331,65 @@ function showToast(message, type = 'info') {
     async function uploadCarouselImage() {
   const fileInput = document.getElementById('carouselImageUpload');
   const file = fileInput.files[0];
+  const uploadBtn = document.getElementById('uploadCarouselImage');
 
   if (!file) {
-    alert("请选择图片");
+    alert("请先选择图片");
     return;
   }
 
   try {
-    // ✅ 创建 Storage 引用
-    const storageRef = firebase.storage().ref();
+    // 禁用按钮防止重复点击
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+
+    // 创建存储引用
+    const storageRef = storage.ref();
     const fileRef = storageRef.child(`carousel/${Date.now()}_${file.name}`);
 
-    // 上传文件
+    // 显示加载状态
+    const dropZone = document.getElementById('dropZone');
+    dropZone.classList.add('uploading');
+
+    // 执行上传
     const snapshot = await fileRef.put(file);
     const downloadURL = await snapshot.ref.getDownloadURL();
 
-    console.log("图片上传成功！URL:", downloadURL);
-    return downloadURL;
+    // 保存到Firestore
+    await db.collection("carouselImages").add({
+      url: downloadURL,
+      uploadedAt: new Date().toISOString(),
+      fileName: file.name
+    });
+
+    // 重置状态
+    showToast('图片上传成功', 'success');
+    loadCarouselImages(); // 刷新列表
+    resetUploadUI();
+    
   } catch (error) {
     console.error("上传失败:", error);
-    alert("上传失败: " + error.message);
+    showToast(`上传失败: ${error.message}`, 'error');
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 重新上传';
   }
+}
+
+function resetUploadUI() {
+  const dropZone = document.getElementById('dropZone');
+  const uploadBtn = document.getElementById('uploadCarouselImage');
+  
+  dropZone.classList.remove('uploading');
+  dropZone.innerHTML = `
+    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+    <h3>拖放图片到此处</h3>
+    <p>或</p>
+    <label for="carouselImageUpload" class="btn btn-outline">
+      <i class="fas fa-folder-open"></i> 选择文件
+    </label>
+  `;
+  uploadBtn.disabled = true;
+  document.getElementById('carouselImageUpload').value = '';
 }
 
     async function deleteCarouselImage(id) {
