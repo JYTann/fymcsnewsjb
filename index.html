@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh" data-theme="light">
 <head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/diff/5.0.0/diff.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
@@ -740,42 +739,6 @@
     font-size: 1.4rem;
   }
 }
-    /* 版本历史样式 */
-.version-item {
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: 0.5rem;
-}
-
-.version-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.version-content {
-  padding: 0.8rem;
-  background: var(--color-bg);
-  border-radius: 6px;
-  margin-top: 0.5rem;
-  max-height: 150px;
-  overflow-y: auto;
-}
-
-.diff-added {
-  background-color: rgba(40, 167, 69, 0.2);
-  text-decoration: underline;
-}
-
-.diff-removed {
-  background-color: rgba(220, 53, 69, 0.2);
-  text-decoration: line-through;
-}
-
-.compare-checkbox {
-  margin-right: 0.5rem;
-}
 
     .published {
       background: var(--color-success);
@@ -1327,11 +1290,6 @@ input:checked + .slider:before {
             <i class="fas fa-unlink"></i>
           </button>
         </div>
-
-        <!-- 在编辑按钮旁边新增版本历史按钮 -->
-<button class="btn btn-info version-history" data-id="${n.id}">
-  <i class="fas fa-history"></i> 版本历史
-</button>
         
         <div id="editor" contenteditable="true"></div>
         
@@ -1545,19 +1503,6 @@ input:checked + .slider:before {
       </div>
     </div>
   </div>
-
-  <!-- 版本历史模态框 -->
-<div id="versionModal" class="modal">
-  <div class="modal-content" style="max-width: 800px;">
-    <h3 class="modal-title"><i class="fas fa-history"></i> 版本历史</h3>
-    <div id="versionList" style="max-height: 400px; overflow-y: auto;"></div>
-    <div class="action-buttons" style="margin-top: 1.5rem;">
-      <button class="btn btn-danger" id="closeVersionModal">
-        <i class="fas fa-times"></i> 关闭
-      </button>
-    </div>
-  </div>
-</div>
 
   <footer>
   <p>© 2025 新山宽柔中学快讯组 | 设计: <a href="tanjunyuanfoonyew@gmail.com">陈俊源</a></p>
@@ -1862,161 +1807,6 @@ async function loginAs(selectedRole) {
         alert("❌ 发布新闻失败，请重试！错误信息: " + error.message);
       }
     }
-
-    // 保存版本历史
-async function saveVersionHistory(newsId, oldContent, editor) {
-  try {
-    // 获取当前最新版本号
-    const snapshot = await db.collection('news_versions')
-      .where('newsId', '==', newsId)
-      .orderBy('versionNumber', 'desc')
-      .limit(1)
-      .get();
-    
-    const nextVersion = snapshot.empty ? 1 : snapshot.docs[0].data().versionNumber + 1;
-    
-    await db.collection('news_versions').add({
-      newsId,
-      content: oldContent,
-      editor,
-      time: new Date().toISOString(),
-      versionNumber: nextVersion
-    });
-  } catch (error) {
-    console.error("保存版本历史失败:", error);
-  }
-}
-
-// 显示版本历史
-async function showVersionHistory(newsId) {
-  const modal = document.getElementById('versionModal');
-  const versionList = document.getElementById('versionList');
-  
-  versionList.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
-  modal.style.display = "flex";
-  
-  try {
-    const snapshot = await db.collection('news_versions')
-      .where('newsId', '==', newsId)
-      .orderBy('versionNumber', 'desc')
-      .get();
-    
-    if (snapshot.empty) {
-      versionList.innerHTML = '<p style="text-align: center;">暂无历史版本</p>';
-      return;
-    }
-    
-    const versions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const currentContent = (await getNewsById(newsId)).content;
-    
-    // 添加当前版本作为比较基准
-    versions.unshift({
-      id: 'current',
-      versionNumber: '当前',
-      time: new Date().toISOString(),
-      content: currentContent,
-      editor: '最新版本'
-    });
-    
-    versionList.innerHTML = `
-      <div style="margin-bottom: 1rem;">
-        <label><input type="checkbox" id="showDiff" class="compare-checkbox"> 显示差异对比</label>
-      </div>
-      ${versions.map((v, i) => `
-        <div class="version-item">
-          <div class="version-header">
-            <span>版本 ${v.versionNumber}</span>
-            <span>${formatDate(v.time)} • ${v.editor}</span>
-          </div>
-          ${i > 0 ? `
-            <button class="btn btn-outline btn-sm restore-version" 
-                    data-id="${newsId}" 
-                    data-version="${versions[i].id}">
-              <i class="fas fa-undo"></i> 恢复到此版本
-            </button>
-          ` : ''}
-          <div class="version-content" id="version-content-${v.id}">
-            ${v.content}
-          </div>
-        </div>
-      `).join('')}
-    `;
-    
-    // 差异对比功能
-    document.getElementById('showDiff').addEventListener('change', function() {
-      if (this.checked) {
-        highlightDiffs(versions);
-      } else {
-        versions.forEach(v => {
-          document.getElementById(`version-content-${v.id}`).innerHTML = v.content;
-        });
-      }
-    });
-    
-    // 恢复版本功能
-    document.querySelectorAll('.restore-version').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (confirm('确定要恢复到此版本吗？当前编辑内容将丢失。')) {
-          const versionId = btn.dataset.version;
-          const versionDoc = await db.collection('news_versions').doc(versionId).get();
-          editor.innerHTML = versionDoc.data().content;
-          modal.style.display = "none";
-        }
-      });
-    });
-    
-  } catch (error) {
-    console.error("加载版本历史失败:", error);
-    versionList.innerHTML = '<p style="text-align: center; color: var(--color-accent);">加载失败</p>';
-  }
-}
-
-// 高亮显示差异
-function highlightDiffs(versions) {
-  for (let i = 1; i < versions.length; i++) {
-    const current = versions[i-1].content;
-    const previous = versions[i].content;
-    
-    const diff = Diff.diffWords(previous, current);
-    let display = '';
-    
-    diff.forEach(part => {
-      const cls = part.added ? 'diff-added' : 
-                 part.removed ? 'diff-removed' : '';
-      display += `<span class="${cls}">${part.value}</span>`;
-    });
-    
-    document.getElementById(`version-content-${versions[i].id}`).innerHTML = display;
-  }
-}
-
-// 在publishNews和saveAsDraft函数中保存版本
-async function publishNews() {
-  const title = titleInput.value.trim();
-  const content = editor.innerHTML.trim();
-  const category = categorySelect.value;
-  
-  if (!title || !content) return; // 验证逻辑不变
-  
-  try {
-    const newsItem = { /* 原有字段 */ };
-    
-    if (editingId) {
-      // 获取旧内容用于保存版本
-      const oldNews = await getNewsById(editingId);
-      await saveVersionHistory(editingId, oldNews.content, "管理员");
-      
-      await db.collection("news").doc(editingId).update(newsItem);
-    } else {
-      // 新增新闻不需要保存版本
-      await db.collection("news").add(newsItem);
-    }
-    
-    // 原有成功处理逻辑
-  } catch (error) {
-    console.error("操作失败:", error);
-  }
-}
 
     // 保存为草稿
     async function saveAsDraft() {
@@ -2925,16 +2715,6 @@ document.getElementById('submitComment').addEventListener('click', () => {
           deleteNews(btn.dataset.id);
         });
       });
-
-      // 版本历史按钮
-document.querySelectorAll('.version-history').forEach(btn => {
-  btn.addEventListener('click', () => showVersionHistory(btn.dataset.id));
-});
-
-// 关闭版本模态框
-document.getElementById('closeVersionModal').addEventListener('click', () => {
-  document.getElementById('versionModal').style.display = "none";
-});
       
       // 字体选择
       document.querySelector('.font-selector').addEventListener('change', function() {
