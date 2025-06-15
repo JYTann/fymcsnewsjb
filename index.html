@@ -1414,27 +1414,41 @@ let role = "";
         <i class="fas fa-book-open"></i> 阅读更多
       </button>
       <div class="share-icons" style="display: flex; gap: 0.5rem;">
-        <a href="#" onclick="event.preventDefault(); window.open('https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicUrl)}', '_blank');" 
-           title="分享到Facebook" style="color: #3b5998;">
+        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicUrl)}" 
+           target="_blank" title="分享到Facebook" style="color: #3b5998;">
           <i class="fab fa-facebook-f"></i>
         </a>
-        <a href="#" onclick="event.preventDefault(); window.open('https://twitter.com/intent/tweet?url=${encodeURIComponent(publicUrl)}&text=${encodeURIComponent(n.title)}', '_blank');" 
-           title="分享到Twitter" style="color: #1da1f2;">
+        <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(publicUrl)}&text=${encodeURIComponent(n.title)}" 
+           target="_blank" title="分享到Twitter" style="color: #1da1f2;">
           <i class="fab fa-twitter"></i>
         </a>
-        <a href="#" onclick="event.preventDefault(); window.open('https://www.threads.net/intent/post?text=${encodeURIComponent(n.title + '\n\n' + publicUrl)}', '_blank');" 
-           title="分享到Threads" style="color: #000;">
+        <a href="https://www.threads.net/intent/post?text=${encodeURIComponent(n.title + '\n\n' + publicUrl)}" 
+           target="_blank" title="分享到Threads" style="color: #000;">
           <i class="fab fa-instagram"></i>
         </a>
-        <a href="#" onclick="event.preventDefault(); window.open('https://api.whatsapp.com/send?text=${encodeURIComponent(n.title + ' - ' + publicUrl)}', '_blank');" 
-           title="分享到WhatsApp" style="color: #25d366;">
+        <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(n.title + ' - ' + publicUrl)}" 
+           target="_blank" title="分享到WhatsApp" style="color: #25d366;">
           <i class="fab fa-whatsapp"></i>
         </a>
       </div>
     </div>
+    ${isAdmin ? `
+    <div class="action-buttons">
+      <button class="btn btn-primary edit-news" data-id="${n.id}">
+        <i class="fas fa-edit"></i> 编辑
+      </button>
+      <button class="btn btn-danger delete-news" data-id="${n.id}">
+        <i class="fas fa-trash"></i> 删除
+      </button>
+      <button class="btn ${n.pinned ? 'btn-warning' : 'btn-secondary'} pin-news" data-id="${n.id}">
+        <i class="fas fa-thumbtack"></i> ${n.pinned ? '取消置顶' : '置顶'}
+      </button>
+    </div>
+    ` : ''}
   </div>
   `;
-    }
+}
+
     // 隐藏管理员登录模态框
     function hideAdminModal() {
       adminModal.style.display = "none";
@@ -2057,26 +2071,25 @@ function showToast(message, type = 'info') {
       return;
     }
     
-    container.innerHTML = news.map(n => generateNewsCard(n)).join("");
+    container.innerHTML = news.map(n => `
+    <div class="card news-card clickable" data-id="${n.id}">
+    <div class="news-meta">
+    <span><i class="fas fa-calendar-alt"></i> ${formatDate(n.time)}</span>
+    <span class="category-tag">${n.category}</span>
+    </div>
+    <h3>${n.title}</h3>
+    <div class="news-excerpt">
+    ${stripHtml(n.content).substring(0, 100)}...
+    </div>
+    </div>
+    `).join("");
     
-    // 使用事件委托处理点击
-    container.addEventListener('click', (e) => {
-      // 处理"阅读更多"按钮点击
-      const readMoreBtn = e.target.closest('.read-more');
-      if (readMoreBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        showNewsDetail(readMoreBtn.dataset.id);
-        return;
-      }
-      
-      // 处理整个卡片点击
-      const newsCard = e.target.closest('.news-card');
-      if (newsCard) {
-        showNewsDetail(newsCard.dataset.id);
-      }
+    // 添加点击事件
+    document.querySelectorAll('.news-card').forEach(card => {
+      card.addEventListener('click', () => {
+        showNewsDetail(card.dataset.id);
+      });
     });
-    
   } catch (error) {
     console.error("加载新闻列表失败:", error);
     document.getElementById("newsItems").innerHTML = `
@@ -2087,7 +2100,7 @@ function showToast(message, type = 'info') {
     </div>
     `;
   }
-    }
+}
 
 // 新增封面滚动功能
 function initCarousel(newsItems) {
