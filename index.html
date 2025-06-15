@@ -917,15 +917,96 @@
         padding: 1rem;
       }
 
-      /* 评论系统样式 */
+      /* 评论区域样式 */
 .comment-section {
-  margin-top: 2rem;
+  margin-top: 2.5rem;
   padding: 1.5rem;
   background: var(--color-card);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--color-border);
+  box-shadow: 0 2px 10px var(--color-shadow);
 }
 
+.comment-section h3 {
+  color: var(--color-primary);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comment-form {
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.form-header h4 {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.privacy-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--color-meta);
+}
+
+/* 匿名切换开关样式 */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--color-primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* 评论输入框 */
 .comment-form textarea {
   width: 100%;
   padding: 1rem;
@@ -934,45 +1015,116 @@
   margin-bottom: 1rem;
   resize: vertical;
   min-height: 100px;
+  font-family: 'Noto Sans SC', sans-serif;
+  transition: border-color 0.2s;
 }
 
+.comment-form textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 82, 118, 0.1);
+}
+
+/* 评论发布区域 */
 .comment-meta {
   display: flex;
-  gap: 1rem;
+  gap: 0.8rem;
   align-items: center;
-  flex-wrap: wrap;
 }
 
-.comment-meta input[type="text"] {
+.name-input {
   flex: 1;
-  min-width: 200px;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
 }
 
+.name-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+/* 评论列表样式 */
 .comment-list {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
 .comment-item {
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
+  padding: 1.2rem;
   margin-bottom: 1rem;
+  background: var(--color-bg);
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
 }
 
 .comment-author {
-  font-weight: bold;
+  font-weight: 600;
   color: var(--color-primary);
 }
 
 .comment-time {
   font-size: 0.8rem;
   color: var(--color-meta);
-  margin-left: 1rem;
+  margin-left: 0.8rem;
 }
 
 .comment-content {
-  margin-top: 0.5rem;
+  margin-top: 0.8rem;
   line-height: 1.6;
+  color: var(--color-text);
 }
+
+.anonymous-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: var(--color-border);
+  color: var(--color-meta);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  margin-left: 0.5rem;
+}
+      /* 添加过渡动画 */
+.comment-item {
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 为每个评论项添加延迟动画 */
+.comment-item:nth-child(1) { animation-delay: 0.1s; }
+.comment-item:nth-child(2) { animation-delay: 0.2s; }
+.comment-item:nth-child(3) { animation-delay: 0.3s; }
+.comment-item:nth-child(4) { animation-delay: 0.4s; }
+.comment-item:nth-child(5) { animation-delay: 0.5s; }
+
+      @media (max-width: 768px) {
+  .comment-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .name-input {
+    margin-bottom: 0.8rem;
+  }
+  
+  .comment-form {
+    padding: 1rem;
+  }
+  
+  .comment-item {
+    padding: 1rem;
+  }
+      }
     }
   </style>
 </head>
@@ -1299,20 +1451,37 @@
         </button>
         <div id="detailContent" style="margin-top: 1.5rem;"></div>
         <div class="divider"></div>
-<div class="comment-section">
+        <div class="comment-section">
   <h3><i class="fas fa-comments"></i> 评论区</h3>
-  <div class="comment-form">
-    <textarea id="commentContent" placeholder="写下您的评论..." rows="3"></textarea>
+  
+  <!-- 评论表单 -->
+  <div class="comment-form card">
+    <div class="form-header">
+      <h4>发表评论</h4>
+      <div class="privacy-toggle">
+        <label class="switch">
+          <input type="checkbox" id="commentAnonymous">
+          <span class="slider round"></span>
+        </label>
+        <span>匿名发表</span>
+      </div>
+    </div>
+    
+    <textarea id="commentContent" placeholder="写下您的想法..." rows="3"></textarea>
+    
     <div class="comment-meta">
-      <input type="text" id="commentName" placeholder="昵称（可选）">
-      <label><input type="checkbox" id="commentAnonymous"> 匿名发表</label>
-      <button class="btn btn-primary" id="submitComment">提交评论</button>
+      <input type="text" id="commentName" placeholder="昵称（可选）" class="name-input">
+      <button class="btn btn-primary" id="submitComment">
+        <i class="fas fa-paper-plane"></i> 发布评论
+      </button>
     </div>
   </div>
+  
+  <!-- 评论列表 -->
   <div class="comment-list" id="commentList">
     <!-- 评论将在这里动态加载 -->
   </div>
-</div>
+        </div>
       </div>
     </section>
   </div>
@@ -2403,65 +2572,8 @@ document.getElementById('submitComment').addEventListener('click', () => {
       document.getElementById('newsList').classList.remove('hidden');
     }
 
-    // 提交评论
-async function submitComment(newsId) {
-  const content = document.getElementById('commentContent').value.trim();
-  const name = document.getElementById('commentName').value.trim();
-  const isAnonymous = document.getElementById('commentAnonymous').checked;
-
-  if (!content) {
-    alert('请输入评论内容');
-    return;
-  }
-
-  try {
-    await db.collection('comments').add({
-      newsId,
-      content,
-      author: isAnonymous ? '匿名用户' : (name || '匿名用户'),
-      time: new Date().toISOString()
-    });
-
-    document.getElementById('commentContent').value = '';
-    document.getElementById('commentName').value = '';
-    loadComments(newsId);
-  } catch (error) {
-    console.error('提交评论失败:', error);
-    alert('评论提交失败，请重试');
-  }
-}
-
-async function loadComments(newsId) {
-  const commentList = document.getElementById("commentList");
-  commentList.innerHTML = '<p>加载中...</p>';
-  
-  try {
-    const snapshot = await db.collection("comments")
-      .where("newsId", "==", newsId)
-      .orderBy("time", "desc")
-      .get();
     
-    if (snapshot.empty) {
-      commentList.innerHTML = '<p style="color: gray;">暂无评论</p>';
-      return;
-    }
 
-    commentList.innerHTML = snapshot.docs.map(doc => {
-      const c = doc.data();
-      return `
-        <div class="comment-item">
-          <div><span class="comment-author">${c.name || "匿名"}</span>
-               <span class="comment-time">${new Date(c.time).toLocaleString('zh-CN')}</span></div>
-          <div class="comment-content">${c.content}</div>
-        </div>
-      `;
-    }).join("");
-
-  } catch (err) {
-    console.error("加载评论失败：", err);
-    commentList.innerHTML = '<p style="color: red;">评论加载失败，请稍后重试。</p>';
-  }
-}
 
 
     // 初始化页面
