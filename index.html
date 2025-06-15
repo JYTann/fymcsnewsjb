@@ -1151,18 +1151,20 @@ input:checked + .slider:before {
   <div class="container">
   <!-- 登录界面 -->
   <section id="login">
-    <div class="card">
-      <h2 style="text-align: center; margin-bottom: 2rem;">系统登录</h2>
-      <div class="role-select" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-        <button class="btn btn-primary" id="adminLoginBtn">
-          <i class="fas fa-user-shield"></i> 管理员登录
-        </button>
-        <button class="btn btn-success" id="guestLoginBtn">
-          <i class="fas fa-user"></i> 访客浏览
-        </button>
-      </div>
+  <div class="card">
+    <h2 style="text-align: center; margin-bottom: 2rem;">系统登录</h2>
+    <div class="role-select" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <button class="btn btn-primary" id="adminLoginBtn">
+        <i class="fas fa-user-shield"></i> 管理员登录
+      </button>
+      <button class="btn btn-success" id="userLoginBtn">
+        <i class="fas fa-user"></i> 用户登录
+      </button>
+      <button class="btn btn-secondary" id="guestLoginBtn">
+        <i class="fas fa-newspaper"></i> 访客浏览
+      </button>
     </div>
-
+  </div>
     <!-- 三格说明区 -->
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
       <!-- 格子1：管理员说明 -->
@@ -1521,8 +1523,24 @@ input:checked + .slider:before {
       measurementId: "G-M9L0H4E2FR"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // 初始化Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// 监听认证状态变化
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    // 用户已登录
+    logoutBtn.classList.remove('hidden');
+  } else {
+    // 用户未登录
+    if (role !== 'guest') {
+      logout();
+    }
+  }
+});
+    
 let editingId = null;
 let role = "";
 
@@ -1711,24 +1729,94 @@ let role = "";
     }
 
     // 用户登录系统
-async function loginAs(selectedRole) {
-  console.log("Logging in as:", selectedRole);
-  role = selectedRole;
-  document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
-  logoutBtn.classList.remove('hidden');
-  
-  if (role === 'admin') {
-    document.getElementById('dashboard').classList.remove('hidden');
-    console.log("Loading admin news...");
-    await loadNewsForAdmin();
+// 修改登录函数
+async function loginAs(selectedRole, email = null, password = null) {
+  try {
+    if (selectedRole === 'admin') {
+      // 管理员登录
+      if (password !== "Microcomputersociety") {
+        throw new Error("管理员密码错误");
+      }
+      role = "admin";
+    } else if (selectedRole === 'user') {
+      // 普通用户登录
+      await firebase.auth().signInWithEmailAndPassword(email, password);
+      role = "user";
+    } else {
+      // 访客
+      role = "guest";
+    }
+
+    document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+    logoutBtn.classList.remove('hidden');
     
-    // 只在管理员登录时加载封面图片管理
-    loadCarouselImages();
-    document.getElementById('uploadCarouselImage').addEventListener('click', uploadCarouselImage);
-  } else {
-    document.getElementById('newsList').classList.remove('hidden');
-    await loadNewsList();
+    if (role === 'admin') {
+      document.getElementById('dashboard').classList.remove('hidden');
+      await loadNewsForAdmin();
+      loadCarouselImages();
+    } else {
+      document.getElementById('newsList').classList.remove('hidden');
+      await loadNewsList();
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("登录失败:", error);
+    showToast(`登录失败: ${error.message}`, 'error');
+    return false;
   }
+}
+
+// 添加用户注册/登录模态框
+function showUserLoginModal() {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3 class="modal-title"><i class="fas fa-user"></i> 用户登录</h3>
+      <input type="email" id="userEmail" placeholder="电子邮箱" class="full-width">
+      <input type="password" id="userPassword" placeholder="密码" class="full-width">
+      <div class="action-buttons" style="margin-top: 1.5rem;">
+        <button class="btn btn-primary" id="userLoginBtn">
+          <i class="fas fa-sign-in-alt"></i> 登录
+        </button>
+        <button class="btn btn-secondary" id="userRegisterBtn">
+          <i class="fas fa-user-plus"></i> 注册
+        </button>
+        <button class="btn btn-danger" id="cancelUserLoginBtn">
+          <i class="fas fa-times"></i> 取消
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // 添加事件监听
+  document.getElementById('userLoginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('userEmail').value;
+    const password = document.getElementById('userPassword').value;
+    if (await loginAs('user', email, password)) {
+      modal.remove();
+    }
+  });
+  
+  document.getElementById('userRegisterBtn').addEventListener('click', async () => {
+    const email = document.getElementById('userEmail').value;
+    const password = document.getElementById('userPassword').value;
+    try {
+      await firebase.auth().createUserWithEmailAndPassword(email, password);
+      showToast('注册成功', 'success');
+      if (await loginAs('user', email, password)) {
+        modal.remove();
+      }
+    } catch (error) {
+      showToast(`注册失败: ${error.message}`, 'error');
+    }
+  });
+  
+  document.getElementById('cancelUserLoginBtn').addEventListener('click', () => {
+    modal.remove();
+  });
 }
 
     // 登出功能
@@ -2725,6 +2813,15 @@ document.getElementById('submitComment').addEventListener('click', () => {
       document.querySelector('.size-selector').addEventListener('change', function() {
         execCmd('fontSize', false, this.value);
       });
+
+      // 添加用户登录按钮绑定
+  document.getElementById('userLoginBtn')?.addEventListener('click', showUserLoginModal);
+  
+  // 评论表单提交
+  document.getElementById('submitComment')?.addEventListener('click', function() {
+    const newsId = document.getElementById('newsDetail').dataset.id;
+    submitComment(newsId);
+  });
     }
 
     // 显示投稿页面
@@ -2761,30 +2858,86 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
     // 提交评论
+asyn// 修改评论提交函数
 async function submitComment(newsId) {
   const content = document.getElementById('commentContent').value.trim();
   const name = document.getElementById('commentName').value.trim();
   const isAnonymous = document.getElementById('commentAnonymous').checked;
 
   if (!content) {
-    alert('请输入评论内容');
+    showToast('请输入评论内容', 'error');
     return;
   }
 
   try {
+    // 获取当前用户信息
+    const user = firebase.auth().currentUser;
+    let displayName = name;
+    
+    if (!displayName && user) {
+      displayName = user.displayName || '用户' + user.uid.substring(0,4);
+    }
+    
+    if (isAnonymous) {
+      displayName = '匿名用户';
+    } else if (!displayName) {
+      displayName = '访客';
+    }
+
     await db.collection('comments').add({
       newsId,
       content,
-      author: isAnonymous ? '匿名用户' : (name || '匿名用户'),
-      time: new Date().toISOString()
+      name: displayName,
+      time: new Date().toISOString(),
+      userId: user ? user.uid : null
     });
 
     document.getElementById('commentContent').value = '';
-    document.getElementById('commentName').value = '';
+    showToast('评论发布成功', 'success');
     loadComments(newsId);
   } catch (error) {
     console.error('提交评论失败:', error);
-    alert('评论提交失败，请重试');
+    showToast('评论发布失败: ' + error.message, 'error');
+  }
+}
+
+// 修改评论加载函数
+async function loadComments(newsId) {
+  const commentList = document.getElementById("commentList");
+  commentList.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+
+  try {
+    const snapshot = await db.collection("comments")
+      .where("newsId", "==", newsId)
+      .orderBy("time", "desc")
+      .limit(50)  // 限制最多加载50条评论
+      .get();
+
+    if (snapshot.empty) {
+      commentList.innerHTML = '<p style="color: var(--color-meta); text-align: center;">暂无评论</p>';
+      return;
+    }
+
+    commentList.innerHTML = snapshot.docs.map(doc => {
+      const c = doc.data();
+      return `
+        <div class="comment-item">
+          <div>
+            <span class="comment-author">${c.name || "匿名用户"}</span>
+            ${c.userId ? `<span class="badge" style="background: var(--color-secondary); color: white; font-size: 0.7em;">认证用户</span>` : ''}
+            <span class="comment-time">${formatDate(c.time)}</span>
+          </div>
+          <div class="comment-content">${c.content}</div>
+        </div>
+      `;
+    }).join("");
+  } catch (error) {
+    console.error("评论加载失败：", error);
+    commentList.innerHTML = `
+      <p style="color: var(--color-accent); text-align: center;">
+        <i class="fas fa-exclamation-triangle"></i> 评论加载失败
+      </p>
+    `;
   }
 }
 
