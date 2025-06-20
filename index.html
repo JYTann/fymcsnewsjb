@@ -2120,50 +2120,38 @@ async function loadNewsForAdmin() {
   const filter = newsFilter.value;
   
   try {
-    // Show loading state
-    container.innerHTML = `
-      <div class="card">
-        <div class="loading">
-          <div class="loading-spinner"></div>
-          <p>正在加载新闻数据...</p>
-        </div>
-      </div>`;
-    
-    let news = [];
     let query = db.collection("news");
     
-    // Apply filters based on selection
-    switch(filter) {
-      case 'drafts':
-        query = query.where("status", "==", "draft");
-        break;
-      case 'published':
-        query = query.where("status", "==", "published");
-        break;
-      // 'all' case falls through to default
+    // 根据筛选条件构建查询
+    if (filter === 'drafts') {
+      query = query.where("status", "==", "draft");
+    } else if (filter === 'published') {
+      query = query.where("status", "==", "published");
     }
     
-    // Always order by time descending
-    const snapshot = await query.orderBy("time", "desc").get();
-    news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // 添加排序
+    query = query.orderBy("time", "desc");
     
-    // Handle empty results
-    if (news.length === 0) {
-      container.innerHTML = `
-        <div class="card">
-          <p style="text-align: center; color: var(--color-meta);">
-            <i class="fas fa-info-circle"></i> 
-            ${filter === 'drafts' ? '没有找到草稿' : 
-              filter === 'published' ? '没有已发布的新闻' : '没有找到任何新闻'}
-          </p>
-          <div style="text-align: center; margin-top: 1rem;">
-            <button class="btn btn-primary" onclick="loadNewsForAdmin()">
-              <i class="fas fa-sync-alt"></i> 刷新
-            </button>
-          </div>
-        </div>`;
-      return;
-    }
+    const snapshot = await query.get();
+    const news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // 渲染新闻列表
+    container.innerHTML = news.map(n => generateNewsCard(n, true)).join("");
+    
+    // 添加事件监听
+    setupNewsCardEventListeners();
+    
+  } catch (error) {
+    console.error("加载新闻失败:", error);
+    container.innerHTML = `
+      <div class="card">
+        <p style="text-align: center; color: var(--color-accent);">
+          <i class="fas fa-exclamation-triangle"></i> 加载失败: ${error.message}
+        </p>
+      </div>
+    `;
+  }
+}
     
     // Render news cards
     container.innerHTML = news.map(n => generateNewsCard(n, true)).join("");
@@ -2366,6 +2354,70 @@ function showToast(message, type = 'info') {
     showToast('图片上传成功', 'success');
     loadCarouselImages(); // 刷新列表
     resetUploadUI();
+    
+  } catch (error) {
+    console.error("上传失败:", error);
+    showToast(`上传失败: ${error.message}`, 'error');
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 重新上传';
+  }
+}
+
+    // 在Firebase初始化部分添加
+const storage = firebase.storage();
+
+// 修正上传函数
+async function uploadCarouselImage() {
+  const fileInput = document.getElementById('carouselImageUpload');
+  const file = fileInput.files[0];
+  const uploadBtn = document.getElementById('uploadCarouselImage');
+
+  if (!file) {
+    showToast("请先选择图片", "error");
+    return;
+  }
+
+  try {
+    // 显示上传状态
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+    
+    // 创建存储引用
+    const storageRef = firebase.storage().ref();
+    const fileRef = storageRef.child(`carousel/${Date.now()}_${file.name}`);
+    
+    // 上传文件
+    const uploadTask = fileRef.put(file);
+    
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        // 上传进度
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('Upload is ' + progress + '% done');
+      }, 
+      (error) => {
+        // 上传失败
+        console.error("上传失败:", error);
+        showToast(`上传失败: ${error.message}`, 'error');
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 重新上传';
+      }, 
+      async () => {
+        // 上传成功
+        const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+        
+        // 保存到Firestore
+        await db.collection("carouselImages").add({
+          url: downloadURL,
+          uploadedAt: new Date().toISOString(),
+          fileName: file.name
+        });
+
+        showToast('图片上传成功', 'success');
+        loadCarouselImages(); // 刷新列表
+        resetUploadUI();
+      }
+    );
     
   } catch (error) {
     console.error("上传失败:", error);
