@@ -1865,23 +1865,24 @@ function updatePreview() {
 
     // 用户登录系统
 async function loginAs(selectedRole) {
-  console.log("Logging in as:", selectedRole);
-  role = selectedRole;
-  document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
-  logoutBtn.classList.remove('hidden');
-  
-  if (role === 'admin') {
-    document.getElementById('dashboard').classList.remove('hidden');
-    console.log("Loading admin news...");
-    await loadNewsForAdmin();
-    await loadCarouselImages(); // 确保加载封面图片
+  try {
+    console.log("Logging in as:", selectedRole);
+    role = selectedRole;
+    document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+    logoutBtn.classList.remove('hidden');
     
-    // 只在管理员登录时加载封面图片管理
-    loadCarouselImages();
-    document.getElementById('uploadCarouselImage').addEventListener('click', uploadCarouselImage);
-  } else {
-    document.getElementById('newsList').classList.remove('hidden');
-    await loadNewsList();
+    if (role === 'admin') {
+      document.getElementById('dashboard').classList.remove('hidden');
+      console.log("Loading admin news...");
+      await loadNewsForAdmin();
+      await loadCarouselImages();
+    } else {
+      document.getElementById('newsList').classList.remove('hidden');
+      await loadNewsList();
+    }
+  } catch (error) {
+    console.error("登录失败:", error);
+    alert("登录失败，请重试！");
   }
 }
 
