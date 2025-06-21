@@ -329,17 +329,22 @@
 /* 登录标题特殊样式 */
 /* 修改登录标题样式 */
 #login .card h2 {
-  font-family: 'Montserrat', 'Noto Sans SC', sans-serif;
+  font-family: 'Noto Sans SC', sans-serif;
   font-size: 2.2rem;
   font-weight: 700;
   text-align: center;
-  margin: 0 auto 1.5rem; /* 减少下边距 */
-  color: #ffffff; /* 使用纯白色 */
+  margin: 0 auto 2rem;
+  color: var(--login-title-color, #333); /* 默认亮色主题黑色 */
   position: relative;
   padding-bottom: 1rem;
-  z-index: 1; /* 确保标题在正常层叠上下文中 */
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3); /* 可选：添加轻微阴影增强可读性 */
+  transition: color 0.3s ease; /* 添加颜色过渡效果 */
 }
+
+/* 暗黑主题下的颜色 */
+[data-theme="dark"] #login .card h2 {
+  color: #ffffff; /* 暗色主题白色 */
+}
+
 
 #login .card h2::after {
   content: "";
