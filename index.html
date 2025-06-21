@@ -5,6 +5,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>新山宽柔中学快讯组</title>
@@ -326,35 +327,71 @@
 }
 
 /* 登录标题特殊样式 */
+/* 系统登录标题 - 现代风格 */
 #login .card h2 {
-  font-size: 2rem;
+  font-family: 'Montserrat', 'Noto Sans SC', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
   text-align: center;
-  margin: 0 auto 2rem; /* 上下保持2rem间距，左右自动居中 */
+  margin: 0 auto 2.5rem;
   color: var(--color-primary);
   position: relative;
-  display: block; /* 改为block元素确保居中生效 */
-  padding: 0 2rem;
-  width: fit-content; /* 宽度根据内容自适应 */
+  display: block;
+  width: fit-content;
+  padding: 0 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* 装饰线样式调整 */
-#login .card h2:before,
-#login .card h2:after {
+/* 发光效果（可选） */
+#login .card h2::after {
+  content: "系统登录";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  z-index: -1;
+  opacity: 0.4;
+  filter: blur(6px);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  #login .card h2 {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    letter-spacing: 0.5px;
+  }
+}
+
+/* 添加卡片背景增强效果（可选） */
+#login .card {
+  background: var(--color-card);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+#login .card::before {
   content: "";
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%); /* 垂直居中 */
-  width: 40px;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-}
-
-#login .card h2:before {
-  left: 0;
-}
-
-#login .card h2:after {
-  right: 0;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  z-index: 0;
 }
 
 /* 移动端适配 */
