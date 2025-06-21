@@ -1141,31 +1141,6 @@ input:checked + .slider:before {
   outline: none;
 }
 
-      /* 搜索框样式 */
-#searchInput {
-  padding: 0.8rem 2rem 0.8rem 1rem;
-  border-radius: 20px;
-  transition: all 0.3s;
-}
-
-#searchInput:focus {
-  box-shadow: 0 0 0 3px rgba(26, 82, 118, 0.2);
-}
-
-#clearSearch {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-#searchInput:not(:placeholder-shown) + #clearSearch {
-  opacity: 0.5;
-}
-
-#searchInput:not(:placeholder-shown) + #clearSearch:hover {
-  opacity: 1;
-  color: var(--color-accent);
-}
-
 /* 评论列表样式 */
 .comment-list {
   margin-top: 1.5rem;
@@ -1501,13 +1476,6 @@ input:checked + .slider:before {
         <div class="editor-header">
           <h2 class="editor-title"><i class="fas fa-bell"></i> 最新消息</h2>
           <div style="margin-top: 1rem;">
- <!-- 新增搜索框 -->
-        <div style="flex-grow: 1; position: relative;">
-          <input type="text" id="searchInput" placeholder="搜索新闻标题/内容..." class="full-width">
-          <button id="clearSearch" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--color-meta); display: none;">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
             <button class="btn btn-success" onclick="showSubmissionForm()">
               <i class="fas fa-edit"></i> 我要投稿
             </button>
@@ -2493,65 +2461,6 @@ function resetUploadUI() {
     const newsItems = await getPinnedNews();
     initCarouselWithNews(newsItems);
   }
-}
-
-    // 在现有JS代码中添加搜索函数
-async function searchNews(keyword) {
-  try {
-    let query = db.collection("news")
-      .where("status", "==", "published")
-      .orderBy("time", "desc");
-
-    // 如果有搜索词，添加标题过滤
-    if (keyword) {
-      const end = keyword.replace(/.$/, c => String.fromCharCode(c.charCodeAt(0) + 1);
-      query = query.where("title", ">=", keyword)
-                   .where("title", "<", end);
-    }
-
-    const snapshot = await query.get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error("搜索失败:", error);
-    return [];
-  }
-}
-
-    // 添加事件监听
-document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
-document.getElementById('clearSearch').addEventListener('click', clearSearch);
-
-// 防抖函数
-function debounce(func, delay) {
-  let timeout;
-  return function() {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, arguments), delay);
-  };
-}
-
-// 搜索处理
-async function handleSearch() {
-  const keyword = document.getElementById('searchInput').value.trim();
-  const news = await searchNews(keyword);
-  renderNewsList(news);
-}
-
-// 清空搜索
-function clearSearch() {
-  document.getElementById('searchInput').value = '';
-  loadNewsList(); // 恢复原始列表
-}
-
-// 通用渲染函数
-function renderNewsList(news) {
-  const container = document.getElementById("newsItems");
-  if (news.length === 0) {
-    container.innerHTML = `<div class="card"><p style="text-align: center;">没有找到匹配的新闻</p></div>`;
-    return;
-  }
-  container.innerHTML = news.map(n => generateNewsCard(n)).join("");
-  setupNewsCardEventListeners();
 }
     // 加载新闻列表
     async function loadNewsList() {
