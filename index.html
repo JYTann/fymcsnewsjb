@@ -327,16 +327,17 @@
 }
 
 /* 登录标题特殊样式 */
-/* 简约高级风格 */
+/* 修改登录标题样式 */
 #login .card h2 {
-  font-family: 'Noto Sans SC', sans-serif;
+  font-family: 'Montserrat', 'Noto Sans SC', sans-serif;
   font-size: 2.2rem;
   font-weight: 700;
   text-align: center;
-  margin: 0 auto 2rem;
-  color: var(--color-text);
+  margin: 0 auto 1.5rem; /* 减少下边距 */
+  color: var(--color-primary);
   position: relative;
   padding-bottom: 1rem;
+  z-index: 1; /* 确保标题在正常层叠上下文中 */
 }
 
 #login .card h2::after {
@@ -351,6 +352,14 @@
     rgba(26, 82, 118, 0) 0%, 
     var(--color-accent) 50%, 
     rgba(26, 82, 118, 0) 100%);
+  z-index: -1; /* 确保下划线在标题下方 */
+}
+
+/* 确保按钮区域有足够的空间 */
+#login .card .role-select {
+  position: relative;
+  z-index: 2; /* 确保按钮在标题上方 */
+  margin-top: 1.5rem; /* 增加上边距 */
 }
 
 /* 移动端适配 */
