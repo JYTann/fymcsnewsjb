@@ -941,36 +941,6 @@
       animation: spin 1.5s linear infinite;
     }
 
-    /* 语言切换按钮样式 */
-.language-toggle {
-  position: absolute;
-  right: 5rem; /* 在主题按钮左侧 */
-  top: 1rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-  color: white;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.language-toggle:hover {
-  background: rgba(255,255,255,0.2);
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .language-toggle {
-    position: static;
-    margin-left: 0.5rem;
-  }
-}
-
     /* 封面图片网格布局 */
 .carousel-grid {
   display: grid;
@@ -1450,14 +1420,6 @@ input:checked + .slider:before {
       </div>
       <button id="logoutBtn" class="btn btn-outline hidden">登出</button>
     </div>
-    <div class="header-controls">
-    <button class="theme-toggle">
-      <i class="fas fa-moon"></i>
-    </button>
-    <button id="languageToggle" class="language-toggle">
-      <i class="fas fa-language"></i> 中文/EN
-    </button>
-  </div>
   </header>
 
   <div class="container">
@@ -2157,133 +2119,6 @@ async function loginAs(selectedRole) {
       editor.innerHTML = "";
       editingId = null;
     }
-
-    const translations = {
-  "zh": {
-    "systemLogin": "系统登录",
-    "adminLogin": "管理员登录",
-    "guestLogin": "访客浏览",
-    "submitNews": "我要投稿",
-    "newsManagement": "新闻管理",
-    "publishNews": "发布新闻",
-    "saveDraft": "保存草稿",
-    "backToList": "返回列表",
-    "commentSection": "评论区",
-    "postComment": "发布评论",
-    "techSupport": "技术支持",
-    "logout": "登出"
-  },
-  "en": {
-    "systemLogin": "System Login",
-    "adminLogin": "Admin Login",
-    "guestLogin": "Guest Browse",
-    "submitNews": "Submit News",
-    "newsManagement": "News Management",
-    "publishNews": "Publish News",
-    "saveDraft": "Save Draft",
-    "backToList": "Back to List",
-    "commentSection": "Comments",
-    "postComment": "Post Comment",
-    "techSupport": "Technical Support",
-    "logout": "Logout"
-  }
-};
-
-    // 语言切换函数
-function toggleLanguage() {
-  currentLanguage = currentLanguage === 'zh' ? 'en' : 'zh';
-  applyTranslations();
-  localStorage.setItem('language', currentLanguage);
-}
-
-// 应用翻译
-function applyTranslations() {
-  // 1. 翻译常规文本元素
-  document.querySelectorAll('[data-translate]').forEach(element => {
-    const key = element.getAttribute('data-translate');
-    if (translations[currentLanguage][key]) {
-      // 保留原有HTML结构（如图标），只替换文本
-      if (element.children.length > 0) {
-        const children = Array.from(element.children);
-        element.textContent = translations[currentLanguage][key];
-        children.forEach(child => element.appendChild(child));
-      } else {
-        element.textContent = translations[currentLanguage][key];
-      }
-    }
-  });
-
-  // 2. 翻译所有placeholder
-  const placeholderElements = [
-    { id: 'titleInput', key: 'newsTitlePlaceholder' },
-    { id: 'submitName', key: 'submitNamePlaceholder' },
-    { id: 'submitTitle', key: 'submitTitlePlaceholder' },
-    { id: 'submitContent', key: 'contentPlaceholder' },
-    { id: 'newsSearchInput', key: 'searchPlaceholder' },
-    { id: 'commentContent', key: 'commentPlaceholder' },
-    { id: 'commentName', key: 'nicknamePlaceholder' },
-    { id: 'adminPassword', key: 'adminPasswordPlaceholder' }
-  ];
-
-  placeholderElements.forEach(item => {
-    const el = document.getElementById(item.id);
-    if (el) {
-      el.placeholder = translations[currentLanguage].placeholders[item.key] || el.placeholder;
-    }
-  });
-
-  // 3. 翻译select选项（特殊处理）
-  const categoryOptions = {
-    '科技新闻': 'techNews',
-    '活动预告': 'events',
-    '学术动态': 'academics',
-    '体育赛事': 'sports',
-    '社团活动': 'clubs'
-  };
-
-  const categorySelect = document.getElementById('categorySelect');
-  if (categorySelect) {
-    Array.from(categorySelect.options).forEach(option => {
-      if (categoryOptions[option.text]) {
-        option.text = translations[currentLanguage].categories[categoryOptions[option.text]];
-      }
-    });
-  }
-
-  // 4. 翻译按钮文本（保留图标）
-  const buttons = [
-    { id: 'adminLoginBtn', key: 'adminLogin' },
-    { id: 'guestLoginBtn', key: 'guestLogin' },
-    { id: 'draftBtn', key: 'saveDraft' },
-    { id: 'publishBtn', key: 'publishNews' },
-    { id: 'backToListBtn', key: 'backToList' },
-    { id: 'submitComment', key: 'postComment' }
-  ];
-
-  buttons.forEach(btn => {
-    const element = document.getElementById(btn.id);
-    if (element) {
-      const icon = element.querySelector('i');
-      if (icon) {
-        element.innerHTML = `<i class="${icon.className}"></i> ${translations[currentLanguage][btn.key]}`;
-      } else {
-        element.textContent = translations[currentLanguage][btn.key];
-      }
-    }
-  });
-}
-
-// 初始化语言
-function initLanguage() {
-  const savedLanguage = localStorage.getItem('language');
-  if (savedLanguage) {
-    currentLanguage = savedLanguage;
-  }
-  applyTranslations();
-}
-
-// 绑定事件
-document.getElementById('languageToggle').addEventListener('click', toggleLanguage);
 
     // 富文本编辑器功能
     function execCmd(cmd, value = null) {
