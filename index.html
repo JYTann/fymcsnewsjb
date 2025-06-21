@@ -327,41 +327,30 @@
 }
 
 /* 登录标题特殊样式 */
-/* 系统登录标题 - 现代风格 */
+/* 简约高级风格 */
 #login .card h2 {
-  font-family: 'Montserrat', 'Noto Sans SC', sans-serif;
-  font-size: 2.5rem;
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 2.2rem;
   font-weight: 700;
   text-align: center;
-  margin: 0 auto 2.5rem;
-  color: var(--color-primary);
+  margin: 0 auto 2rem;
+  color: var(--color-text);
   position: relative;
-  display: block;
-  width: fit-content;
-  padding: 0 1.5rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding-bottom: 1rem;
 }
 
-/* 发光效果（可选） */
 #login .card h2::after {
-  content: "系统登录";
+  content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: transparent;
-  z-index: -1;
-  opacity: 0.4;
-  filter: blur(6px);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    rgba(26, 82, 118, 0) 0%, 
+    var(--color-accent) 50%, 
+    rgba(26, 82, 118, 0) 100%);
 }
 
 /* 移动端适配 */
