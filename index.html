@@ -135,9 +135,16 @@
     }
 
     header {
-      background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-    }
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  background-size: 200% 200%;
+  animation: gradientBG 15s ease infinite;
+}
 
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
     .clickable {
       cursor: pointer;
     }
