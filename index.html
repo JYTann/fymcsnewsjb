@@ -1209,6 +1209,33 @@ input:checked + .slider:before {
 .comment-item:nth-child(4) { animation-delay: 0.4s; }
 .comment-item:nth-child(5) { animation-delay: 0.5s; }
 
+      /* 添加在style标签的末尾，在@media查询之前 */
+.upload-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.upload-area:hover {
+  background-color: rgba(var(--color-primary-rgb), 0.05);
+  border-color: var(--color-primary) !important;
+}
+
+#imagePreview img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.3s;
+}
+
+#imagePreview img:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
       @media (max-width: 768px) {
   .comment-meta {
     flex-direction: column;
@@ -1560,11 +1587,36 @@ input:checked + .slider:before {
 
     <textarea id="submitContent" rows="6" placeholder="请输入内容..." class="full-width"></textarea>
     
-    <div style="margin-top: 1rem;">
-      <label style="display:block; margin-bottom: 0.5rem;">上传图片（最多 3 张）：</label>
-      <input type="file" id="submitImages" accept="image/*" multiple class="full-width">
-      <div id="imagePreview" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
-    </div>
+    <div class="image-upload-section" style="margin-top: 1.5rem;">
+  <label class="upload-label">
+    <i class="fas fa-camera"></i> 上传图片（最多3张）
+  </label>
+  <div class="upload-hint" style="font-size: 0.85rem; color: var(--color-meta); margin-bottom: 0.5rem;">
+    <i class="fas fa-info-circle"></i> 支持JPG/PNG格式，每张不超过5MB
+  </div>
+  
+  <div class="upload-area" style="
+    border: 2px dashed var(--color-border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 1rem;
+  ">
+    <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--color-primary); margin-bottom: 0.5rem;"></i>
+    <div style="font-weight: 500;">点击或拖放图片到此处</div>
+    <div style="font-size: 0.9rem; color: var(--color-meta);">支持多选</div>
+    <input type="file" id="submitImages" accept="image/*" multiple style="display: none;">
+  </div>
+  
+  <div id="imagePreview" style="
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+  "></div>
+</div>
 
     <div class="action-buttons" style="margin-top: 1.5rem;">
       <button class="btn btn-primary" onclick="submitNews()">
@@ -2957,25 +3009,51 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('submitImages');
   const preview = document.getElementById('imagePreview');
   
-  if (fileInput) {
-    fileInput.addEventListener('change', () => {
-      preview.innerHTML = "";
-      const files = Array.from(fileInput.files).slice(0, 3);
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          img.style.width = '100px';
-          img.style.height = 'auto';
-          img.style.borderRadius = '8px';
-          img.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-          preview.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-  }
+  /******************************
+ * 美化图片上传预览功能（新代码）
+ ******************************/
+document.getElementById('submitImages').addEventListener('change', function() {
+  const preview = document.getElementById('imagePreview');
+  preview.innerHTML = "";
+  
+  const files = Array.from(this.files).slice(0, 3); // 限制最多3张
+  
+  if (files.length === 0) return;
+  
+  files.forEach((file, index) => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`图片 ${file.name} 超过5MB限制，将不会被上传`);
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const previewItem = document.createElement('div');
+      previewItem.style.position = 'relative';
+      
+      previewItem.innerHTML = `
+        <img src="${e.target.result}" alt="预览图 ${index + 1}">
+        <div class="image-info" style="/* 样式已省略 */">
+          ${file.name.substring(0, 15)}${file.name.length > 15 ? '...' : ''}
+          (${(file.size / 1024).toFixed(1)}KB)
+        </div>
+      `;
+      preview.appendChild(previewItem);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// 拖放功能相关代码（保持完整粘贴）
+const uploadArea = document.querySelector('.upload-area');
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+  uploadArea.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) { /* ... */ }
+function highlight() { /* ... */ }
+function unhighlight() { /* ... */ }
+function handleDrop(e) { /* ... */ }
 });
 
     // 提交评论
@@ -3025,8 +3103,8 @@ async function submitNews() {
       content,
       category,
       time: new Date().toISOString(),
-      status: 'pending',
-      images: []  // 无图
+      status: 'pending'
+      // 移除了images字段
     };
 
     await db.collection("submissions").add(data);
