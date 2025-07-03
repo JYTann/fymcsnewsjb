@@ -1421,6 +1421,25 @@ input:checked + .slider:before {
       </div>
       <button id="logoutBtn" class="btn btn-outline hidden">登出</button>
     </div>
+     <!-- 新增搜索框 -->
+  <div style="max-width: 800px; margin: 1rem auto; padding: 0 1rem;">
+    <input 
+      type="text" 
+      id="newsSearchInput" 
+      placeholder="🔍 输入关键词搜索新闻..." 
+      style="
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        border-radius: 8px;
+        border: 2px solid var(--color-border);
+        background: var(--color-card);
+        color: var(--color-text);
+        transition: all 0.3s;
+        box-shadow: 0 2px 6px var(--color-shadow);
+      "
+    />
+  </div>
   </header>
 
   <div class="container">
@@ -1658,27 +1677,7 @@ input:checked + .slider:before {
             <button class="btn btn-success" onclick="showSubmissionForm()">
               <i class="fas fa-edit"></i> 我要投稿
             </button>
-          </div>
-          <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-  <input 
-    type="text" 
-    id="newsSearchInput" 
-    placeholder="🔍 输入关键词搜索新闻..." 
-    class="full-width" 
-    style="
-      flex: 1;
-      padding: 0.75rem 1rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: 2px solid var(--color-border);
-      background: var(--color-card);
-      color: var(--color-text);
-      transition: all 0.3s;
-      box-shadow: 0 2px 6px var(--color-shadow);
-    "
-  />
-</div>
-
+          
           <div>
             <select id="categoryFilter">
               <option value="all">全部类别</option>
@@ -2740,6 +2739,27 @@ function resetUploadUI() {
     `;
   }
 }
+
+    const newsSearchInput = document.getElementById("newsSearchInput");
+
+newsSearchInput.addEventListener("input", () => {
+  const keyword = newsSearchInput.value.trim().toLowerCase();
+  filterNewsByKeyword(keyword);
+});
+
+function filterNewsByKeyword(keyword) {
+  const allNewsCards = document.querySelectorAll("#newsItems .news-card");
+  allNewsCards.forEach(card => {
+    const title = card.querySelector("h3").innerText.toLowerCase();
+    const content = card.querySelector(".news-excerpt").innerText.toLowerCase();
+    if (title.includes(keyword) || content.includes(keyword)) {
+      card.style.display = "";
+    } else {
+      card.style.display = "none";
+    }
+  });
+}
+
 
 // 新增封面滚动功能
 function initCarousel(newsItems) {
